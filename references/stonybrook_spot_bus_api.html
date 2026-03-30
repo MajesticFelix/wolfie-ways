@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SBU SPOT Bus API — Unofficial Documentation</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0e12;
+    --surface: #14171e;
+    --surface-raised: #1a1e28;
+    --surface-hover: #1f2430;
+    --border: #262c3a;
+    --border-dim: #1e2230;
+    --text: #e2e4ea;
+    --text-dim: #8b90a0;
+    --text-muted: #5c6070;
+    --accent: #e84545;
+    --accent-dim: rgba(232,69,69,0.12);
+    --green: #3ecf6e;
+    --green-dim: rgba(62,207,110,0.12);
+    --blue: #5a9cf5;
+    --blue-dim: rgba(90,156,245,0.12);
+    --yellow: #f0c040;
+    --yellow-dim: rgba(240,192,64,0.12);
+    --purple: #a87cf5;
+    --purple-dim: rgba(168,124,245,0.12);
+    --orange: #e89c3c;
+    --orange-dim: rgba(232,156,60,0.12);
+    --code-bg: #0a0c10;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* --- LAYOUT --- */
+  .page {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+  }
+
+  @media (max-width: 900px) {
+    .page { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+  }
+
+  /* --- SIDEBAR --- */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    border-right: 1px solid var(--border-dim);
+    padding: 28px 20px;
+    background: var(--surface);
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .sidebar-logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+
+  .sidebar-logo span { color: var(--accent); }
+
+  .sidebar-sub {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+    font-weight: 600;
+  }
+
+  .nav-section {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin: 20px 0 8px;
+  }
+
+  .nav-link {
+    display: block;
+    font-size: 13px;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    transition: all 0.15s;
+    margin-bottom: 1px;
+  }
+
+  .nav-link:hover { color: var(--text); background: var(--surface-hover); }
+  .nav-link code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  /* --- MAIN --- */
+  main {
+    max-width: 860px;
+    padding: 48px 48px 120px;
+  }
+
+  @media (max-width: 600px) { main { padding: 24px 16px 80px; } }
+
+  /* --- HERO --- */
+  .hero {
+    margin-bottom: 56px;
+    padding-bottom: 40px;
+    border-bottom: 1px solid var(--border-dim);
+  }
+
+  .hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 40px;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 12px;
+  }
+
+  .hero h1 span { color: var(--accent); }
+
+  .hero p { color: var(--text-dim); font-size: 16px; max-width: 560px; }
+
+  .badge-row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+  }
+
+  .badge--red { background: var(--accent-dim); color: var(--accent); }
+  .badge--green { background: var(--green-dim); color: var(--green); }
+  .badge--blue { background: var(--blue-dim); color: var(--blue); }
+
+  /* --- SECTIONS --- */
+  .section { margin-bottom: 56px; }
+  .section:last-child { margin-bottom: 0; }
+
+  h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+    padding-top: 20px;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 32px 0 10px;
+    letter-spacing: -0.01em;
+  }
+
+  h4 {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 20px 0 8px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  p { margin-bottom: 12px; color: var(--text-dim); font-size: 14.5px; }
+  p strong { color: var(--text); }
+
+  /* --- ENDPOINT CARD --- */
+  .endpoint {
+    background: var(--surface);
+    border: 1px solid var(--border-dim);
+    border-radius: var(--radius-lg);
+    margin: 20px 0 28px;
+    overflow: hidden;
+  }
+
+  .endpoint-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-dim);
+    flex-wrap: wrap;
+  }
+
+  .method-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 5px;
+    background: var(--green-dim);
+    color: var(--green);
+    letter-spacing: 0.04em;
+  }
+
+  .endpoint-url {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    word-break: break-all;
+  }
+
+  .endpoint-url .param { color: var(--orange); }
+
+  .endpoint-body { padding: 20px; }
+
+  .endpoint-desc { margin-bottom: 16px; }
+
+  /* --- TABLES --- */
+  .param-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 8px 0 16px;
+  }
+
+  .param-table th {
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    font-weight: 700;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .param-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-dim);
+    vertical-align: top;
+  }
+
+  .param-table tr:last-child td { border-bottom: none; }
+
+  .param-table code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--blue);
+    background: var(--blue-dim);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .param-table .type {
+    color: var(--purple);
+    background: var(--purple-dim);
+  }
+
+  .param-table .required {
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .param-table .optional {
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .param-table .desc { color: var(--text-dim); line-height: 1.5; }
+
+  /* --- CODE BLOCKS --- */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border-dim);
+    border-radius: var(--radius);
+    overflow-x: auto;
+    margin: 12px 0 16px;
+    position: relative;
+  }
+
+  .code-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border-dim);
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .code-block pre {
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--text-dim);
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .code-block pre .key { color: var(--blue); }
+  .code-block pre .str { color: var(--green); }
+  .code-block pre .num { color: var(--orange); }
+  .code-block pre .null { color: var(--text-muted); }
+  .code-block pre .bool { color: var(--purple); }
+  .code-block pre .comment { color: var(--text-muted); font-style: italic; }
+  .code-block pre .url { color: var(--yellow); }
+
+  /* --- RESPONSE FIELD GRID --- */
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin: 8px 0 16px;
+  }
+
+  @media (max-width: 600px) { .field-grid { grid-template-columns: 1fr; } }
+
+  .field {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 13px;
+    padding: 6px 10px;
+    background: var(--surface-raised);
+    border-radius: 6px;
+  }
+
+  .field code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--blue);
+    white-space: nowrap;
+  }
+
+  .field .type-tag {
+    font-size: 10px;
+    color: var(--purple);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* --- CALLOUT --- */
+  .callout {
+    padding: 14px 18px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    margin: 12px 0 16px;
+    border-left: 3px solid;
+  }
+
+  .callout--info { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+  .callout--warn { background: var(--yellow-dim); border-color: var(--yellow); color: var(--yellow); }
+  .callout--tip { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+
+  /* --- INLINE CODE --- */
+  p code, li code, td .inline-code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--surface-raised);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--text);
+  }
+
+  /* --- LISTS --- */
+  ul, ol { padding-left: 20px; margin: 8px 0 14px; }
+  li { font-size: 14px; color: var(--text-dim); margin-bottom: 4px; }
+
+  /* --- DIVIDER --- */
+  hr {
+    border: none;
+    border-top: 1px solid var(--border-dim);
+    margin: 40px 0;
+  }
+
+  /* --- ROUTE COLOR CHIP --- */
+  .color-chip {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    vertical-align: middle;
+    margin-right: 4px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  /* --- Scrollbar --- */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">SPOT<span>.</span>api</div>
+  <div class="sidebar-sub">Unofficial Docs</div>
+
+  <div class="nav-section">Overview</div>
+  <a class="nav-link" href="#intro">Introduction</a>
+  <a class="nav-link" href="#base-url">Base URL & Auth</a>
+
+  <div class="nav-section">Endpoints</div>
+  <a class="nav-link" href="#get_routes"><code>get_routes</code></a>
+  <a class="nav-link" href="#get_stops"><code>get_stops</code></a>
+  <a class="nav-link" href="#get_patterns"><code>get_patterns</code></a>
+  <a class="nav-link" href="#get_active_patterns"><code>get_active_patterns</code></a>
+  <a class="nav-link" href="#get_vehicles"><code>get_vehicles</code></a>
+  <a class="nav-link" href="#get_stop_etas"><code>get_stop_etas</code></a>
+  <a class="nav-link" href="#get_schedules"><code>get_schedules</code></a>
+  <a class="nav-link" href="#get_stopimages"><code>get_stopimages</code></a>
+  <a class="nav-link" href="#get_service_announcements"><code>get_service_<wbr>announcements</code></a>
+  <a class="nav-link" href="#get_version_id"><code>get_version_id</code></a>
+
+  <div class="nav-section">Reference</div>
+  <a class="nav-link" href="#known-routes">Known Routes</a>
+  <a class="nav-link" href="#known-stops">Known Stops</a>
+  <a class="nav-link" href="#polling">Polling Strategy</a>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main>
+
+<!-- HERO -->
+<div class="hero" id="intro">
+  <h1>Stony Brook SPOT Bus <span>API</span></h1>
+  <p>Unofficial reverse-engineered documentation for the EtaSpot transit API powering Stony Brook University's campus bus tracking system at <code>stonybrook.etaspot.net</code>.</p>
+  <div class="badge-row">
+    <span class="badge badge--red">Unofficial</span>
+    <span class="badge badge--green">REST / JSON</span>
+    <span class="badge badge--blue">No Auth Required</span>
+  </div>
+</div>
+
+<!-- BASE URL -->
+<div class="section" id="base-url">
+  <h2>Base URL & Authentication</h2>
+  <p>All endpoints are accessed via a single PHP gateway. Every request requires a <code>token</code> parameter, but the fixed string <strong>TESTING</strong> works for all public queries — no registration needed.</p>
+
+  <div class="code-block">
+    <div class="code-block-header">Base URL</div>
+    <pre><span class="url">https://stonybrook.etaspot.net/service.php</span></pre>
+  </div>
+
+  <h4>Common Query Parameters</h4>
+  <table class="param-table">
+    <thead><tr><th>Param</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>service</code></td>
+        <td><code class="type">string</code></td>
+        <td><span class="required">Required</span></td>
+        <td class="desc">The API method name (e.g. <code>get_routes</code>)</td>
+      </tr>
+      <tr>
+        <td><code>token</code></td>
+        <td><code class="type">string</code></td>
+        <td><span class="required">Required</span></td>
+        <td class="desc">Authentication token. Use <code>TESTING</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="code-block">
+    <div class="code-block-header">Example Request</div>
+    <pre>GET <span class="url">https://stonybrook.etaspot.net/service.php?service=get_routes&token=TESTING</span></pre>
+  </div>
+
+  <div class="callout callout--warn">⚠ This is an undocumented API. It may change or break without notice. Use responsibly and avoid excessive polling.</div>
+</div>
+
+<hr>
+
+<!-- =================== ENDPOINTS =================== -->
+
+<!-- GET_ROUTES -->
+<div class="section" id="get_routes">
+  <h2>get_routes</h2>
+  <p>Returns all configured bus routes, including their ordered stop lists, display colors, and encoded polylines for map rendering.</p>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method-badge">GET</span>
+      <span class="endpoint-url">/service.php?service=<span class="param">get_routes</span>&token=TESTING</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="endpoint-desc">No additional parameters required.</p>
+
+      <h4>Response — <code>get_routes[]</code></h4>
+      <table class="param-table">
+        <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td><code class="type">int</code></td><td class="desc">Unique route identifier</td></tr>
+          <tr><td><code>name</code></td><td><code class="type">string</code></td><td class="desc">Full display name (e.g. "Outer Loop")</td></tr>
+          <tr><td><code>abbr</code></td><td><code class="type">string</code></td><td class="desc">Short abbreviation (e.g. "Outer")</td></tr>
+          <tr><td><code>stops</code></td><td><code class="type">int[]</code></td><td class="desc">Ordered array of stop IDs along the route</td></tr>
+          <tr><td><code>vType</code></td><td><code class="type">string</code></td><td class="desc">Vehicle type (always <code>"Bus"</code>)</td></tr>
+          <tr><td><code>encLine</code></td><td><code class="type">string</code></td><td class="desc">Google Maps encoded polyline of the route path</td></tr>
+          <tr><td><code>color</code></td><td><code class="type">string</code></td><td class="desc">Hex color code for map display</td></tr>
+          <tr><td><code>type</code></td><td><code class="type">string</code></td><td class="desc">Route type (e.g. <code>"Loop"</code>)</td></tr>
+          <tr><td><code>order</code></td><td><code class="type">int</code></td><td class="desc">Display sort order</td></tr>
+          <tr><td><code>showDirection</code></td><td><code class="type">bool</code></td><td class="desc">Whether to show direction labels</td></tr>
+          <tr><td><code>showPlatform</code></td><td><code class="type">bool</code></td><td class="desc">Whether to show platform info</td></tr>
+          <tr><td><code>showScheduleNumber</code></td><td><code class="type">int</code></td><td class="desc">Flag for schedule number display</td></tr>
+          <tr><td><code>useCustomShape</code></td><td><code class="type">int</code></td><td class="desc">Whether route uses a custom map shape</td></tr>
+          <tr><td><code>showVehicleCapacity</code></td><td><code class="type">bool</code></td><td class="desc">Whether to display vehicle capacity in UI</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-block-header">Example Response</div>
+        <pre>{
+  <span class="key">"get_routes"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">3</span>,
+      <span class="key">"name"</span>: <span class="str">"Outer Loop"</span>,
+      <span class="key">"abbr"</span>: <span class="str">"Outer"</span>,
+      <span class="key">"stops"</span>: [<span class="num">1</span>, <span class="num">9</span>, <span class="num">17</span>, <span class="num">20</span>, <span class="num">19</span>, <span class="num">24</span>, <span class="num">23</span>, <span class="num">25</span>, <span class="num">26</span>, <span class="num">15</span>, <span class="num">13</span>, <span class="num">11</span>, <span class="num">4</span>, <span class="num">5</span>, <span class="num">6</span>, <span class="num">7</span>, <span class="num">8</span>],
+      <span class="key">"vType"</span>: <span class="str">"Bus"</span>,
+      <span class="key">"encLine"</span>: <span class="str">"uavxFvei}L??@ZNT..."</span>,
+      <span class="key">"color"</span>: <span class="str">"#126F28"</span>,
+      <span class="key">"type"</span>: <span class="str">"Loop"</span>,
+      <span class="key">"order"</span>: <span class="num">4</span>,
+      <span class="key">"showVehicleCapacity"</span>: <span class="bool">true</span>
+    }
+  ]
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GET_STOPS -->
+<div class="section" id="get_stops">
+  <h2>get_stops</h2>
+  <p>Returns all bus stops across all routes, including GPS coordinates. A single stop (e.g. "SAC") may appear multiple times — once per route it belongs to — with a different <code>rid</code> and <code>rsid</code> each time.</p>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method-badge">GET</span>
+      <span class="endpoint-url">/service.php?service=<span class="param">get_stops</span>&token=TESTING</span>
+    </div>
+    <div class="endpoint-body">
+      <h4>Response — <code>get_stops[]</code></h4>
+      <table class="param-table">
+        <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td><code class="type">int</code></td><td class="desc">Global stop identifier (shared across routes)</td></tr>
+          <tr><td><code>rid</code></td><td><code class="type">int</code></td><td class="desc">Route ID this stop instance belongs to</td></tr>
+          <tr><td><code>rsid</code></td><td><code class="type">int</code></td><td class="desc">Route-stop composite ID (unique per route×stop combination)</td></tr>
+          <tr><td><code>name</code></td><td><code class="type">string</code></td><td class="desc">Full display name (e.g. "Life Science West")</td></tr>
+          <tr><td><code>shortName</code></td><td><code class="type">string</code></td><td class="desc">Abbreviated name (e.g. "LifeW")</td></tr>
+          <tr><td><code>lat</code></td><td><code class="type">float</code></td><td class="desc">Latitude</td></tr>
+          <tr><td><code>lng</code></td><td><code class="type">float</code></td><td class="desc">Longitude</td></tr>
+          <tr><td><code>extID</code></td><td><code class="type">string</code></td><td class="desc">External ID (typically mirrors <code>id</code> as a string)</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-block-header">Example Response</div>
+        <pre>{
+  <span class="key">"get_stops"</span>: [
+    {
+      <span class="key">"rid"</span>: <span class="num">1</span>,
+      <span class="key">"rsid"</span>: <span class="num">65537</span>,
+      <span class="key">"id"</span>: <span class="num">1</span>,
+      <span class="key">"name"</span>: <span class="str">"SAC"</span>,
+      <span class="key">"lat"</span>: <span class="num">40.91435</span>,
+      <span class="key">"lng"</span>: <span class="num">-73.12485</span>,
+      <span class="key">"extID"</span>: <span class="str">"1"</span>,
+      <span class="key">"shortName"</span>: <span class="str">"SAC"</span>
+    }
+  ]
+}</pre>
+      </div>
+      <div class="callout callout--tip">💡 To get unique stops, deduplicate by <code>id</code>. The <code>rid</code> field tells you which route each stop-instance is associated with.</div>
+    </div>
+  </div>
+</div>
+
+<!-- GET_PATTERNS -->
+<div class="section" id="get_patterns">
+  <h2>get_patterns</h2>
+  <p>Returns all route patterns — specific path variants that buses follow. A single route (like "Outer Loop") can have multiple patterns representing different service windows (e.g. morning pull-in, full loop, late night).</p>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method-badge">GET</span>
+      <span class="endpoint-url">/service.php?service=<span class="param">get_patterns</span>&token=TESTING</span>
+    </div>
+    <div class="endpoint-body">
+      <h4>Response — <code>get_patterns[]</code></h4>
+      <table class="param-table">
+        <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td><code class="type">int</code></td><td class="desc">Unique pattern ID</td></tr>
+          <tr><td><code>name</code></td><td><code class="type">string</code></td><td class="desc">Internal pattern name (e.g. "I/L 1-A 7am-10:00pm")</td></tr>
+          <tr><td><code>type</code></td><td><code class="type">int</code></td><td class="desc">Pattern type: <code>1</code> = pull (partial), <code>2</code> = full service, <code>4</code> = full service (alternate)</td></tr>
+          <tr><td><code>length</code></td><td><code class="type">float</code></td><td class="desc">Route length in miles</td></tr>
+          <tr><td><code>color</code></td><td><code class="type">string</code></td><td class="desc">Hex color for map rendering</td></tr>
+          <tr><td><code>encLine</code></td><td><code class="type">string</code></td><td class="desc">Google Maps encoded polyline of this pattern's path</td></tr>
+          <tr><td><code>decLine</code></td><td><code class="type">array</code></td><td class="desc">Decoded line data (typically empty)</td></tr>
+          <tr><td><code>routes</code></td><td><code class="type">int[]</code></td><td class="desc">Array of route IDs this pattern belongs to</td></tr>
+          <tr><td><code>routeNames</code></td><td><code class="type">string[]</code></td><td class="desc">Human-readable route names</td></tr>
+          <tr><td><code>stations</code></td><td><code class="type">array</code></td><td class="desc">Station data (typically empty)</td></tr>
+          <tr><td><code>stopIDs</code></td><td><code class="type">int[]</code></td><td class="desc">Ordered stop IDs for this pattern (may include the start stop repeated at the end for loops)</td></tr>
+          <tr><td><code>extID</code></td><td><code class="type">string|null</code></td><td class="desc">External identifier</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-block-header">Example Response (truncated)</div>
+        <pre>{
+  <span class="key">"get_patterns"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">46</span>,
+      <span class="key">"name"</span>: <span class="str">"I/L 1-A 7am-10:00pm"</span>,
+      <span class="key">"type"</span>: <span class="num">2</span>,
+      <span class="key">"length"</span>: <span class="num">1.615</span>,
+      <span class="key">"color"</span>: <span class="str">"#E89C3C"</span>,
+      <span class="key">"encLine"</span>: <span class="str">"uavxFlei}L..."</span>,
+      <span class="key">"routes"</span>: [<span class="num">1</span>],
+      <span class="key">"routeNames"</span>: [<span class="str">"Inner Loop"</span>],
+      <span class="key">"stopIDs"</span>: [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>, <span class="num">6</span>, <span class="num">7</span>, <span class="num">8</span>, <span class="num">1</span>]
+    }
+  ]
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GET_ACTIVE_PATTERNS -->
+<div class="section" id="get_active_patterns">
+  <h2>get_active_patterns</h2>
+  <p>Returns only the patterns that are currently running. When no buses are in service, the result object is empty. The client polls this periodically to detect route configuration changes.</p>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method-badge">GET</span>
+      <span class="endpoint-url">/service.php?service=<span class="param">get_active_patterns</span>&token=TESTING</span>
+    </div>
+    <div class="endpoint-body">
+      <h4>Response</h4>
+      <div class="code-block">
+        <div class="code-block-header">Example (no active service)</div>
+        <pre>{
+  <span class="key">"get_active_patterns"</span>: {
+    <span class="key">"errors"</span>: [],
+    <span class="key">"result"</span>: {}
+  }
+}</pre>
+      </div>
+      <div class="callout callout--info">ℹ When buses are running, <code>result</code> will contain pattern IDs mapped to their active configurations. Polled every ~30 seconds by the web client alongside <code>get_version_id</code>.</div>
+    </div>
+  </div>
+</div>
+
+<!-- GET_VEHICLES -->
+<div class="section" id="get_vehicles">
+  <h2>get_vehicles</h2>
+  <p>Returns real-time positions and status for all tracked buses. Can be called in a basic mode (all vehicles) or an enhanced mode (only in-service vehicles with ETA data).</p>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method-badge">GET</span>
+      <span class="endpoint-url">/service.php?service=<span class="param">get_vehicles</span>&token=TESTING</span>
+    </div>
+    <div class="endpoint-body">
+
+      <h4>Optional Parameters</h4>
+      <table class="param-table">
+        <thead><tr><th>Param</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>includeETAData</code></td>
+            <td><code class="type">int</code></td>
+            <td><span class="optional">0</span></td>
+            <td class="desc">Set to <code>1</code> to include ETA predictions for upcoming stops</td>
+          </tr>
+          <tr>
+            <td><code>inService</code></td>
+            <td><code class="type">int</code></td>
+            <td><span class="optional">0</span></td>
+            <td class="desc">Set to <code>1</code> to only return vehicles currently in service</td>
+          </tr>
+          <tr>
+            <td><code>orderedETAArray</code></td>
+            <td><code class="type">int</code></td>
+            <td><span class="optional">0</span></td>
+            <td class="desc">Set to <code>1</code> to sort ETA data by arrival time</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>Response — <code>get_vehicles[]</code></h4>
+      <table class="param-table">
+        <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>equipmentID</code></td><td><code class="type">string</code></td><td class="desc">Bus number / vehicle identifier</td></tr>
+          <tr><td><code>routeID</code></td><td><code class="type">int</code></td><td class="desc">Current route ID (<code>777</code> = not assigned / out of service)</td></tr>
+          <tr><td><code>patternID</code></td><td><code class="type">int</code></td><td class="desc">Current pattern ID (<code>9998</code> = not assigned)</td></tr>
+          <tr><td><code>lat</code></td><td><code class="type">float</code></td><td class="desc">Current latitude</td></tr>
+          <tr><td><code>lng</code></td><td><code class="type">float</code></td><td class="desc">Current longitude</td></tr>
+          <tr><td><code>h</code></td><td><code class="type">int</code></td><td class="desc">Heading in degrees (0–360, 0 = North)</td></tr>
+          <tr><td><code>load</code></td><td><code class="type">int</code></td><td class="desc">Current passenger count</td></tr>
+          <tr><td><code>capacity</code></td><td><code class="type">int</code></td><td class="desc">Maximum passenger capacity</td></tr>
+          <tr><td><code>eLoad</code></td><td><code class="type">int</code></td><td class="desc">Estimated load</td></tr>
+          <tr><td><code>bkSlots</code></td><td><code class="type">int|null</code></td><td class="desc">Bike rack slots</td></tr>
+          <tr><td><code>wcSlots</code></td><td><code class="type">int|null</code></td><td class="desc">Wheelchair slots</td></tr>
+          <tr><td><code>bkUsed</code></td><td><code class="type">int</code></td><td class="desc">Bike rack slots in use</td></tr>
+          <tr><td><code>wcUsed</code></td><td><code class="type">int</code></td><td class="desc">Wheelchair slots in use</td></tr>
+          <tr><td><code>inService</code></td><td><code class="type">int</code></td><td class="desc"><code>1</code> = in service, <code>0</code> = out of service</td></tr>
+          <tr><td><code>scheduleNumber</code></td><td><code class="type">string</code></td><td class="desc">Current schedule block (<code>"NIS"</code> = Not In Service)</td></tr>
+          <tr><td><code>nextStopID</code></td><td><code class="type">int</code></td><td class="desc">ID of the next stop (<code>0</code> = none)</td></tr>
+          <tr><td><code>nextStopETA</code></td><td><code class="type">int</code></td><td class="desc">ETA to next stop in seconds (<code>-1</code> = unavailable)</td></tr>
+          <tr><td><code>nextPatternStopID</code></td><td><code class="type">int</code></td><td class="desc">Pattern-stop composite ID for the next stop</td></tr>
+          <tr><td><code>lastStopID</code></td><td><code class="type">int</code></td><td class="desc">Last visited stop ID</td></tr>
+          <tr><td><code>lastPatternStopID</code></td><td><code class="type">int</code></td><td class="desc">Pattern-stop ID of the last visited stop</td></tr>
+          <tr><td><code>blockID</code></td><td><code class="type">int</code></td><td class="desc">Scheduling block ID</td></tr>
+          <tr><td><code>tripID</code></td><td><code class="type">int|null</code></td><td class="desc">Current trip ID</td></tr>
+          <tr><td><code>vehicleType</code></td><td><code class="type">string</code></td><td class="desc">Always <code>"Bus"</code></td></tr>
+          <tr><td><code>trainID</code></td><td><code class="type">int</code></td><td class="desc">Train ID (always <code>0</code> for buses)</td></tr>
+          <tr><td><code>deadHead</code></td><td><code class="type">int</code></td><td class="desc"><code>1</code> if bus is deadheading (traveling without passengers)</td></tr>
+          <tr><td><code>onSchedule</code></td><td><code class="type">string|null</code></td><td class="desc">Schedule adherence status</td></tr>
+          <tr><td><code>receiveTime</code></td><td><code class="type">long</code></td><td class="desc">Unix timestamp in milliseconds of last GPS fix</td></tr>
+          <tr><td><code>aID</code></td><td><code class="type">string</code></td><td class="desc">Hardware/asset device ID</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-block-header">Live tracking request</div>
+        <pre>GET <span class="url">/service.php?service=get_vehicles&includeETAData=1&inService=1&orderedETAArray=1&token=TESTING</span>
+
+<span class="comment">// Returns only in-service vehicles with ETA data sorted by arrival time.</span>
+<span class="comment">// The web client polls this every ~10 seconds.</span></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GET_STOP_ETAS -->
+<div class="section" id="get_stop_etas">
+  <h2>get_stop_etas</h2>
+  <p>Returns estimated arrival times at one or all stops. Each ETA entry represents an upcoming scheduled or predicted bus arrival. This is the primary endpoint for "when is my bus coming?" queries.</p>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method-badge">GET</span>
+      <span class="endpoint-url">/service.php?service=<span class="param">get_stop_etas</span>&token=TESTING</span>
+    </div>
+    <div class="endpoint-body">
+
+      <h4>Optional Parameters</h4>
+      <table class="param-table">
+        <thead><tr><th>Param</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>stopID</code></td>
+            <td><code class="type">int</code></td>
+            <td><span class="optional">all</span></td>
+            <td class="desc">Filter to a specific stop. Omit to get ETAs for all stops.</td>
+          </tr>
+          <tr>
+            <td><code>statusData</code></td>
+            <td><code class="type">int</code></td>
+            <td><span class="optional">0</span></td>
+            <td class="desc">Set to <code>1</code> to include schedule status info</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>Response — <code>get_stop_etas[]</code></h4>
+      <p>Array of objects, one per stop. Each contains an <code>enRoute</code> array of upcoming arrivals:</p>
+      <table class="param-table">
+        <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td><code class="type">int|string</code></td><td class="desc">Stop ID</td></tr>
+          <tr><td><code>enRoute[].minutes</code></td><td><code class="type">int</code></td><td class="desc">Minutes until arrival</td></tr>
+          <tr><td><code>enRoute[].time</code></td><td><code class="type">string</code></td><td class="desc">Predicted arrival time (e.g. <code>"08:32AM"</code>)</td></tr>
+          <tr><td><code>enRoute[].schedule</code></td><td><code class="type">string</code></td><td class="desc">Scheduled arrival time</td></tr>
+          <tr><td><code>enRoute[].status</code></td><td><code class="type">string</code></td><td class="desc">Schedule status (<code>"-"</code> = no live data, otherwise early/late info)</td></tr>
+          <tr><td><code>enRoute[].routeID</code></td><td><code class="type">int</code></td><td class="desc">Which route this arrival is on</td></tr>
+          <tr><td><code>enRoute[].scheduleNumber</code></td><td><code class="type">string</code></td><td class="desc">Schedule block identifier</td></tr>
+          <tr><td><code>enRoute[].stopID</code></td><td><code class="type">int</code></td><td class="desc">Stop ID (redundant with parent)</td></tr>
+          <tr><td><code>enRoute[].patternStopID</code></td><td><code class="type">int</code></td><td class="desc">Pattern-stop composite ID</td></tr>
+          <tr><td><code>enRoute[].timePoint</code></td><td><code class="type">int</code></td><td class="desc"><code>1</code> if this is a scheduled timepoint</td></tr>
+          <tr><td><code>enRoute[].track</code></td><td><code class="type">int</code></td><td class="desc">Track/platform number</td></tr>
+          <tr><td><code>enRoute[].direction</code></td><td><code class="type">string</code></td><td class="desc">Direction label (e.g. <code>"Outbound"</code>)</td></tr>
+          <tr><td><code>enRoute[].directionAbbr</code></td><td><code class="type">string</code></td><td class="desc">Direction abbreviation (e.g. <code>"O"</code>)</td></tr>
+          <tr><td><code>enRoute[].equipmentID</code></td><td><code class="type">string</code></td><td class="desc">Assigned bus number (<code>"-"</code> = schedule-based, not live)</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-block-header">Example — Single Stop</div>
+        <pre>GET <span class="url">/service.php?service=get_stop_etas&stopID=17&statusData=1&token=TESTING</span>
+
+{
+  <span class="key">"get_stop_etas"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="str">"17"</span>,
+      <span class="key">"enRoute"</span>: [
+        {
+          <span class="key">"minutes"</span>: <span class="num">462</span>,
+          <span class="key">"routeID"</span>: <span class="num">3</span>,
+          <span class="key">"time"</span>: <span class="str">"08:32AM"</span>,
+          <span class="key">"schedule"</span>: <span class="str">"08:32AM"</span>,
+          <span class="key">"status"</span>: <span class="str">"-"</span>,
+          <span class="key">"direction"</span>: <span class="str">"Outbound"</span>,
+          <span class="key">"equipmentID"</span>: <span class="str">"-"</span>
+        }
+      ]
+    }
+  ]
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GET_SCHEDULES -->
+<div class="section" id="get_schedules">
+  <h2>get_schedules</h2>
+  <p>Returns the full published timetable for a specific stop. Unlike <code>get_stop_etas</code> which shows predicted arrivals, this shows the complete schedule for the day. Triggered when a user clicks a stop in the web UI.</p>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method-badge">GET</span>
+      <span class="endpoint-url">/service.php?service=<span class="param">get_schedules</span>&stopID=<span class="param">{id}</span>&token=TESTING</span>
+    </div>
+    <div class="endpoint-body">
+
+      <h4>Parameters</h4>
+      <table class="param-table">
+        <thead><tr><th>Param</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>stopID</code></td>
+            <td><code class="type">int</code></td>
+            <td><span class="required">Required</span></td>
+            <td class="desc">The stop ID to retrieve schedules for</td>
+          </tr>
+          <tr>
+            <td><code>includeETAData</code></td>
+            <td><code class="type">int</code></td>
+            <td><span class="optional">0</span></td>
+            <td class="desc">Set to <code>1</code> to merge live ETA data</td>
+          </tr>
+          <tr>
+            <td><code>orderedETAArray</code></td>
+            <td><code class="type">int</code></td>
+            <td><span class="optional">0</span></td>
+            <td class="desc">Set to <code>1</code> to sort results by time</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>Response — <code>get_schedules[]</code></h4>
+      <table class="param-table">
+        <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>corridorID</code></td><td><code class="type">int</code></td><td class="desc">Route ID</td></tr>
+          <tr><td><code>runID</code></td><td><code class="type">int</code></td><td class="desc">Unique run identifier</td></tr>
+          <tr><td><code>scheduleNumber</code></td><td><code class="type">string</code></td><td class="desc">Schedule block identifier (e.g. <code>"08:30:00-3BSu"</code>)</td></tr>
+          <tr><td><code>scheduleID</code></td><td><code class="type">int</code></td><td class="desc">Schedule configuration ID</td></tr>
+          <tr><td><code>scheduleName</code></td><td><code class="type">string</code></td><td class="desc">Human-readable schedule name (e.g. <code>"O/L-B Su 8:30am-11pm"</code>)</td></tr>
+          <tr><td><code>stationID</code></td><td><code class="type">int</code></td><td class="desc">Stop ID</td></tr>
+          <tr><td><code>stationName</code></td><td><code class="type">string</code></td><td class="desc">Stop name</td></tr>
+          <tr><td><code>patternStopID</code></td><td><code class="type">int</code></td><td class="desc">Pattern-stop composite ID</td></tr>
+          <tr><td><code>stopTime</code></td><td><code class="type">string</code></td><td class="desc">Scheduled arrival time (e.g. <code>"8:32AM"</code>)</td></tr>
+          <tr><td><code>timePoint</code></td><td><code class="type">int</code></td><td class="desc"><code>1</code> = published timepoint</td></tr>
+          <tr><td><code>weekdays</code></td><td><code class="type">string</code></td><td class="desc">Day-of-week code: <code>"12345"</code> = Mon–Fri, <code>"6"</code> = Sat, <code>"7"</code> = Sun</td></tr>
+          <tr><td><code>direction</code></td><td><code class="type">string</code></td><td class="desc">Direction abbreviation (<code>"O"</code> = Outbound, <code>"I"</code> = Inbound)</td></tr>
+          <tr><td><code>directionLabel</code></td><td><code class="type">string</code></td><td class="desc">Full direction name</td></tr>
+          <tr><td><code>track</code></td><td><code class="type">string</code></td><td class="desc">Track/platform number</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-block-header">Example</div>
+        <pre>GET <span class="url">/service.php?service=get_schedules&stopID=26&includeETAData=1&orderedETAArray=1&token=TESTING</span>
+
+{
+  <span class="key">"get_schedules"</span>: [
+    {
+      <span class="key">"corridorID"</span>: <span class="num">3</span>,
+      <span class="key">"scheduleName"</span>: <span class="str">"O/L-B Su 8:30am-11pm"</span>,
+      <span class="key">"stationName"</span>: <span class="str">"Life Science West"</span>,
+      <span class="key">"stopTime"</span>: <span class="str">"8:45AM"</span>,
+      <span class="key">"weekdays"</span>: <span class="str">"7"</span>,
+      <span class="key">"direction"</span>: <span class="str">"O"</span>
+    }
+  ]
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GET_STOPIMAGES -->
+<div class="section" id="get_stopimages">
+  <h2>get_stopimages</h2>
+  <p>Returns metadata and photos for each stop, including shelter type, amenities, and nearby landmark descriptions.</p>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method-badge">GET</span>
+      <span class="endpoint-url">/service.php?service=<span class="param">get_stopimages</span>&token=TESTING</span>
+    </div>
+    <div class="endpoint-body">
+      <h4>Response — <code>get_stopimages[]</code></h4>
+      <table class="param-table">
+        <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>stopid</code></td><td><code class="type">int</code></td><td class="desc">Stop ID</td></tr>
+          <tr><td><code>type</code></td><td><code class="type">string</code></td><td class="desc">Stop shelter type (e.g. <code>"Sheltered"</code>)</td></tr>
+          <tr><td><code>stoplocdesc</code></td><td><code class="type">string</code></td><td class="desc">Location description with cross streets and route info</td></tr>
+          <tr><td><code>amenities</code></td><td><code class="type">string</code></td><td class="desc">Comma-separated list: Lighting, Sidewalk, Shelter, etc.</td></tr>
+          <tr><td><code>comments</code></td><td><code class="type">string</code></td><td class="desc">Nearby buildings, halls, and parking lots</td></tr>
+          <tr><td><code>images</code></td><td><code class="type">string[]</code></td><td class="desc">Relative image paths (prepend base URL to fetch)</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-block-header">Image URL format</div>
+        <pre><span class="comment">// Images are relative paths. Full URL:</span>
+<span class="url">https://stonybrook.etaspot.net/</span><span class="str">Content/images/85/3.png</span></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GET_SERVICE_ANNOUNCEMENTS -->
+<div class="section" id="get_service_announcements">
+  <h2>get_service_announcements</h2>
+  <p>Returns current service alerts and announcements, grouped by severity level.</p>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method-badge">GET</span>
+      <span class="endpoint-url">/service.php?service=<span class="param">get_service_announcements</span>&token=TESTING</span>
+    </div>
+    <div class="endpoint-body">
+      <h4>Response — <code>get_service_announcements[]</code></h4>
+      <table class="param-table">
+        <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>type</code></td><td><code class="type">string</code></td><td class="desc">Severity level: <code>"high"</code> or <code>"normal"</code></td></tr>
+          <tr><td><code>announcements[].text</code></td><td><code class="type">string</code></td><td class="desc">Announcement body text</td></tr>
+          <tr><td><code>announcements[].start</code></td><td><code class="type">string</code></td><td class="desc">Start datetime (<code>YYYY-MM-DD HH:MM:SS</code>)</td></tr>
+          <tr><td><code>announcements[].end</code></td><td><code class="type">string</code></td><td class="desc">End datetime</td></tr>
+          <tr><td><code>announcements[].cause</code></td><td><code class="type">string</code></td><td class="desc">Cause category (e.g. <code>"Other cause"</code>)</td></tr>
+          <tr><td><code>announcements[].effect</code></td><td><code class="type">string</code></td><td class="desc">Effect category</td></tr>
+          <tr><td><code>announcements[].source</code></td><td><code class="type">string</code></td><td class="desc">Origin system (e.g. <code>"SPOT Console"</code>)</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-block-header">Example Response</div>
+        <pre>{
+  <span class="key">"get_service_announcements"</span>: [
+    {
+      <span class="key">"type"</span>: <span class="str">"high"</span>,
+      <span class="key">"announcements"</span>: [
+        {
+          <span class="key">"text"</span>: <span class="str">"Starting January 22nd, R&D shuttle will be replaced..."</span>,
+          <span class="key">"start"</span>: <span class="str">"2026-02-25 07:00:00"</span>,
+          <span class="key">"end"</span>: <span class="str">"2026-05-21 17:00:00"</span>,
+          <span class="key">"cause"</span>: <span class="str">"Other cause"</span>,
+          <span class="key">"effect"</span>: <span class="str">"Other effect"</span>,
+          <span class="key">"source"</span>: <span class="str">"SPOT Console"</span>
+        }
+      ]
+    }
+  ]
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GET_VERSION_ID -->
+<div class="section" id="get_version_id">
+  <h2>get_version_id</h2>
+  <p>Returns a version number that increments when route/pattern configuration changes. The client polls this to know when to re-fetch static data like routes, stops, and patterns.</p>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method-badge">GET</span>
+      <span class="endpoint-url">/service.php?service=<span class="param">get_version_id</span>&token=TESTING</span>
+    </div>
+    <div class="endpoint-body">
+      <div class="code-block">
+        <div class="code-block-header">Response</div>
+        <pre>{
+  <span class="key">"versionID"</span>: <span class="num">77</span>
+}</pre>
+      </div>
+      <div class="callout callout--tip">💡 Cache your routes/stops/patterns data and only re-fetch when <code>versionID</code> changes. The web client checks this every ~30 seconds.</div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- KNOWN ROUTES -->
+<div class="section" id="known-routes">
+  <h2>Known Routes</h2>
+  <p>Routes observed in the captured data. Additional routes (Inner Loop, Railroad, Express, etc.) exist in the pattern data but may not appear in <code>get_routes</code> when inactive.</p>
+
+  <table class="param-table">
+    <thead><tr><th>ID</th><th>Name</th><th>Color</th><th>Stops</th></tr></thead>
+    <tbody>
+      <tr><td><code>3</code></td><td>Outer Loop</td><td><span class="color-chip" style="background:#126F28"></span> #126F28</td><td>17 stops</td></tr>
+      <tr><td><code>4</code></td><td>Hospital/Chapin</td><td><span class="color-chip" style="background:#6D0F84"></span> #6D0F84</td><td>15 stops</td></tr>
+      <tr><td><code>8</code></td><td>Port Jefferson Shuttle</td><td><span class="color-chip" style="background:#FAEC2A"></span> #FAEC2A</td><td>5 stops</td></tr>
+      <tr><td><code>25</code></td><td>Charter</td><td><span class="color-chip" style="background:#CE3AC6"></span> #CE3AC6</td><td>2 stops</td></tr>
+    </tbody>
+  </table>
+
+  <p>Routes found in pattern data but not in <code>get_routes</code> at time of capture (likely seasonal or weekday-only):</p>
+  <table class="param-table">
+    <thead><tr><th>Name</th><th>Pattern Color</th></tr></thead>
+    <tbody>
+      <tr><td>Inner Loop</td><td><span class="color-chip" style="background:#E89C3C"></span> #E89C3C</td></tr>
+      <tr><td>Railroad / Railroad Sunday</td><td><span class="color-chip" style="background:#020202;border-color:rgba(255,255,255,0.2)"></span> #020202</td></tr>
+      <tr><td>Express East / Express West</td><td>—</td></tr>
+      <tr><td>Hospital Express</td><td>—</td></tr>
+      <tr><td>Shopping East / Shopping West</td><td>—</td></tr>
+      <tr><td>Southampton</td><td>—</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- KNOWN STOPS -->
+<div class="section" id="known-stops">
+  <h2>Known Stops</h2>
+  <p>All 47 unique stops observed. Use the <code>id</code> field for API queries.</p>
+
+  <div style="max-height:400px;overflow-y:auto;border:1px solid var(--border-dim);border-radius:var(--radius-lg);margin:12px 0;">
+    <table class="param-table" style="margin:0;">
+      <thead style="position:sticky;top:0;background:var(--surface);z-index:1;"><tr><th>ID</th><th>Name</th><th>Short</th><th>Lat</th><th>Lng</th></tr></thead>
+      <tbody>
+        <tr><td><code>1</code></td><td>SAC</td><td>SAC</td><td>40.91435</td><td>-73.12485</td></tr>
+        <tr><td><code>2</code></td><td>Lot 13</td><td>Lot13</td><td>40.91368</td><td>-73.12836</td></tr>
+        <tr><td><code>3</code></td><td>Roosevelt West</td><td>RW</td><td>40.91204</td><td>-73.12807</td></tr>
+        <tr><td><code>4</code></td><td>Greeley</td><td>GR</td><td>40.91111</td><td>-73.13130</td></tr>
+        <tr><td><code>5</code></td><td>West E</td><td>WestE</td><td>40.91177</td><td>-73.13441</td></tr>
+        <tr><td><code>6</code></td><td>West G</td><td>WestG</td><td>40.91301</td><td>-73.13596</td></tr>
+        <tr><td><code>7</code></td><td>West C</td><td>WestC</td><td>40.91247</td><td>-73.13338</td></tr>
+        <tr><td><code>8</code></td><td>Nobel</td><td>nobel</td><td>40.91300</td><td>-73.12949</td></tr>
+        <tr><td><code>9</code></td><td>Kelly</td><td>Kelly</td><td>40.91343</td><td>-73.12920</td></tr>
+        <tr><td><code>10</code></td><td>Circle Road</td><td>Circl</td><td>40.91304</td><td>-73.12904</td></tr>
+        <tr><td><code>11</code></td><td>Roosevelt East</td><td>RoosE</td><td>40.91193</td><td>-73.12763</td></tr>
+        <tr><td><code>12</code></td><td>Tabler Steps West</td><td>Tab W</td><td>40.91111</td><td>-73.12648</td></tr>
+        <tr><td><code>13</code></td><td>Tabler Steps East</td><td>Tab E</td><td>40.91103</td><td>-73.12594</td></tr>
+        <tr><td><code>14</code></td><td>Roth/Tabler West</td><td>RothW</td><td>40.91042</td><td>-73.12463</td></tr>
+        <tr><td><code>15</code></td><td>Roth/Tabler East</td><td>RothE</td><td>40.91038</td><td>-73.12412</td></tr>
+        <tr><td><code>16</code></td><td>Hamilton</td><td>Ham</td><td>40.91367</td><td>-73.12982</td></tr>
+        <tr><td><code>17</code></td><td>Gym Road East</td><td>Gym E</td><td>40.91799</td><td>-73.12943</td></tr>
+        <tr><td><code>18</code></td><td>Gym Road West</td><td>Gym W</td><td>40.91843</td><td>-73.12933</td></tr>
+        <tr><td><code>19</code></td><td>Long Island Rail Road</td><td>LIRR</td><td>40.92139</td><td>-73.12749</td></tr>
+        <tr><td><code>20</code></td><td>North P Lot</td><td>No. P</td><td>40.92292</td><td>-73.12592</td></tr>
+        <tr><td><code>23</code></td><td>East Side Dining</td><td>ESide</td><td>40.91669</td><td>-73.12123</td></tr>
+        <tr><td><code>24</code></td><td>M&H Quad</td><td>M&H</td><td>40.91815</td><td>-73.11810</td></tr>
+        <tr><td><code>25</code></td><td>Administration</td><td>Admin</td><td>40.91415</td><td>-73.11922</td></tr>
+        <tr><td><code>26</code></td><td>Life Science West</td><td>LifeW</td><td>40.91095</td><td>-73.11916</td></tr>
+        <tr><td><code>27</code></td><td>Life Science East</td><td>LifeE</td><td>40.91096</td><td>-73.11896</td></tr>
+        <tr><td><code>28</code></td><td>South Campus West</td><td>SCamW</td><td>40.90478</td><td>-73.12173</td></tr>
+        <tr><td><code>29</code></td><td>South Campus East</td><td>SCamE</td><td>40.90448</td><td>-73.12151</td></tr>
+        <tr><td><code>30</code></td><td>Point of Woods</td><td>PtWds</td><td>40.91378</td><td>-73.11395</td></tr>
+        <tr><td><code>31</code></td><td>Emergency Room</td><td>Emerg</td><td>40.90896</td><td>-73.11422</td></tr>
+        <tr><td><code>32</code></td><td>Chapin Apartments</td><td>Chpn</td><td>40.90841</td><td>-73.11160</td></tr>
+        <tr><td><code>33</code></td><td>Child Care</td><td>Child</td><td>40.89826</td><td>-73.12811</td></tr>
+        <tr><td><code>36</code></td><td>Lot 40 Wolfie's Express East</td><td>ExpE</td><td>40.89647</td><td>-73.12668</td></tr>
+        <tr><td><code>37</code></td><td>Lot 40 Wolfie's Express West</td><td>ExpW</td><td>40.89678</td><td>-73.12663</td></tr>
+        <tr><td><code>41</code></td><td>Engineering</td><td>Engin</td><td>40.91343</td><td>-73.12419</td></tr>
+        <tr><td><code>42</code></td><td>Target South Setauket</td><td>Targe</td><td>40.88578</td><td>-73.09985</td></tr>
+        <tr><td><code>43</code></td><td>Walmart Centereach</td><td>WMart</td><td>40.86257</td><td>-73.08230</td></tr>
+        <tr><td><code>44</code></td><td>Stop & Shop South Setauket</td><td>S&S</td><td>40.88268</td><td>-73.10402</td></tr>
+        <tr><td><code>45</code></td><td>Stop & Shop East Setauket</td><td>S&SES</td><td>40.93933</td><td>-73.10941</td></tr>
+        <tr><td><code>46</code></td><td>Port Jefferson Village</td><td>PtJef</td><td>40.94875</td><td>-73.06755</td></tr>
+        <tr><td><code>47</code></td><td>Lot A - Southampton</td><td>Lot A</td><td>40.88818</td><td>-72.44229</td></tr>
+        <tr><td><code>48</code></td><td>Stop 1</td><td>ST1</td><td>40.89739</td><td>-73.12804</td></tr>
+        <tr><td><code>49</code></td><td>Stop 2</td><td>St2</td><td>40.89539</td><td>-73.12620</td></tr>
+        <tr><td><code>50</code></td><td>Stop 3</td><td>St3</td><td>40.89734</td><td>-73.12530</td></tr>
+        <tr><td><code>54</code></td><td>Lot 40, Hosp/Chapin, Hosp Exp</td><td>HC HE</td><td>40.89686</td><td>-73.12660</td></tr>
+        <tr><td><code>65</code></td><td>Stony Brook Village</td><td>SB Vi</td><td>40.91899</td><td>-73.14726</td></tr>
+        <tr><td><code>66</code></td><td>Charter1</td><td>Cha1</td><td>40.91382</td><td>-73.12399</td></tr>
+        <tr><td><code>67</code></td><td>Charter 2</td><td>Ch2</td><td>40.91328</td><td>-73.12392</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- POLLING -->
+<div class="section" id="polling">
+  <h2>Polling Strategy</h2>
+  <p>Based on observed request patterns from the official web client, here's how the frontend polls the API:</p>
+
+  <table class="param-table">
+    <thead><tr><th>Endpoint</th><th>Frequency</th><th>Trigger</th></tr></thead>
+    <tbody>
+      <tr><td><code>get_vehicles</code> (with ETA flags)</td><td>~10 seconds</td><td>Continuous while page is open</td></tr>
+      <tr><td><code>get_service_announcements</code></td><td>~10 seconds</td><td>Continuous while page is open</td></tr>
+      <tr><td><code>get_stop_etas</code> (specific stop)</td><td>~10 seconds</td><td>While a stop info panel is open</td></tr>
+      <tr><td><code>get_version_id</code></td><td>~30 seconds</td><td>Continuous — triggers route refresh on change</td></tr>
+      <tr><td><code>get_active_patterns</code></td><td>~30 seconds</td><td>Polled alongside version check</td></tr>
+      <tr><td><code>get_routes</code>, <code>get_stops</code>, <code>get_patterns</code></td><td>Once</td><td>On page load, re-fetched on version change</td></tr>
+      <tr><td><code>get_stopimages</code></td><td>Once</td><td>On page load</td></tr>
+      <tr><td><code>get_schedules</code></td><td>On demand</td><td>When user clicks a stop</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout--warn">⚠ Be respectful with polling. The official client uses ~10s intervals for live data. For personal projects, consider 15–30 second intervals to reduce server load.</div>
+
+  <h3>Recommended Client Architecture</h3>
+  <p>On startup, fetch <code>get_routes</code>, <code>get_stops</code>, <code>get_patterns</code>, <code>get_stopimages</code>, and <code>get_version_id</code> once and cache them. Then poll <code>get_vehicles</code> (with <code>includeETAData=1&inService=1&orderedETAArray=1</code>) every 15 seconds for live bus positions. Periodically check <code>get_version_id</code> and re-fetch the cached data only when the version changes. Use <code>get_stop_etas</code> and <code>get_schedules</code> on demand when a user selects a stop.</p>
+
+  <h3>Special Values</h3>
+  <table class="param-table">
+    <thead><tr><th>Value</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>routeID = 777</code></td><td>Vehicle is not assigned to any route</td></tr>
+      <tr><td><code>patternID = 9998</code></td><td>Vehicle is not following any pattern</td></tr>
+      <tr><td><code>scheduleNumber = "NIS"</code></td><td>Not In Service</td></tr>
+      <tr><td><code>nextStopETA = -1</code></td><td>ETA unavailable</td></tr>
+      <tr><td><code>nextStopID = 0</code></td><td>No next stop assigned</td></tr>
+      <tr><td><code>equipmentID = "-"</code></td><td>Schedule-only data, no live vehicle assigned</td></tr>
+      <tr><td><code>status = "-"</code></td><td>No real-time schedule adherence data</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<hr>
+<p style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:40px;">
+  Reverse-engineered from <code>stonybrook.etaspot.net</code> network traffic, March 2026.<br>
+  This is an unofficial community resource. Not affiliated with Stony Brook University or EtaSpot/SPOT.
+</p>
+
+</main>
+</div>
+</body>
+</html>
