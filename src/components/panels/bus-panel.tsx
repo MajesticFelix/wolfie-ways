@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, MapPin, Clock } from "lucide-react";
+import { Users, MapPin, Clock, ArrowLeft } from "lucide-react";
 import {
   normalizeColor,
   formatEtaSeconds,
@@ -16,10 +16,11 @@ interface BusPanelProps {
   route?: Route;
   nextStop?: Stop;
   stops?: Map<number, Stop>;
+  previousStop?: Stop;
 }
 
-export function BusPanel({ vehicle, route, nextStop, stops }: BusPanelProps) {
-  const { selectStop, panMap } = useTransit();
+export function BusPanel({ vehicle, route, nextStop, stops, previousStop }: BusPanelProps) {
+  const { selectStop, panMap, backToStop } = useTransit();
   const color = normalizeColor(route?.color ?? "#3B82F6");
   const loadPct = loadPercent(vehicle.load, vehicle.capacity);
 
@@ -64,6 +65,28 @@ export function BusPanel({ vehicle, route, nextStop, stops }: BusPanelProps) {
         </div>
       </div>
 
+      {/* Back to stop button */}
+      {previousStop && (
+        <button
+          onClick={() => {
+            backToStop();
+            panMap(previousStop.lat, previousStop.lng, 18);
+          }}
+          className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl border border-zinc-200/60 dark:border-zinc-700/40 bg-zinc-100/60 dark:bg-zinc-800/40 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/40 transition-colors text-left"
+        >
+          <ArrowLeft className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
+          <MapPin className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
+          <div className="min-w-0">
+            <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block">
+              Back to stop
+            </span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate block">
+              {previousStop.name}
+            </span>
+          </div>
+        </button>
+      )}
+
       {/* Next Stop — only show when etaArray is unavailable */}
       {!hasEtaStops && nextStop && (
         <div className="p-3 rounded-xl bg-zinc-100/80 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-zinc-700/40">
@@ -107,7 +130,7 @@ export function BusPanel({ vehicle, route, nextStop, stops }: BusPanelProps) {
                 <div
                   key={`${eta.stopID}-${i}`}
                   onClick={() => {
-                    selectStop(eta.stopID);
+                    selectStop(eta.stopID, vehicle.equipmentID);
                     if (stop) panMap(stop.lat, stop.lng, 18);
                   }}
                   className={`flex items-center justify-between gap-3 px-3 py-3 cursor-pointer transition-colors hover:bg-zinc-200/60 dark:hover:bg-zinc-700/40 ${

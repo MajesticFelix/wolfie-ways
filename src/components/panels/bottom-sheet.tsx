@@ -37,6 +37,13 @@ export function BottomSheet({
     ? stopMap.get(selectedVehicle.nextStopID)
     : undefined;
   const stopImage = selectedStop ? stopImages.get(selectedStop.id) : undefined;
+  const previousBusVehicle =
+    state.previousBus !== null ? vehicleMap.get(state.previousBus) : undefined;
+  const previousBusRoute = previousBusVehicle
+    ? routeMap.get(previousBusVehicle.routeID)
+    : undefined;
+  const previousStop =
+    state.previousStop !== null ? stopMap.get(state.previousStop) : undefined;
 
   return (
     <>
@@ -78,7 +85,10 @@ export function BottomSheet({
             <StopPanel
               stop={selectedStop}
               routes={routes}
+              vehicles={vehicles}
               stopImage={stopImage}
+              previousBusVehicle={previousBusVehicle}
+              previousBusRoute={previousBusRoute}
             />
           )}
           {state.panelMode === "bus" && selectedVehicle && (
@@ -87,6 +97,7 @@ export function BottomSheet({
               route={selectedVehicleRoute}
               nextStop={nextStop}
               stops={stopMap}
+              previousStop={previousStop}
             />
           )}
         </div>

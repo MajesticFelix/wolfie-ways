@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { APIProvider, Map, useMap } from '@vis.gl/react-google-maps';
-import { useEffect, useRef } from 'react';
-import { SBU_CENTER, SBU_DEFAULT_ZOOM } from '@/lib/utils/maps';
-import { useTransit } from '@/lib/stores/transit-store';
-import { RouteLines } from './route-lines';
-import { StopMarkers } from './stop-markers';
-import { BusMarkers } from './bus-markers';
-import { ZoomControls } from './zoom-controls';
-import type { Route, Stop, Vehicle } from '@/lib/api/types';
+import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps";
+import { useEffect, useRef } from "react";
+import { SBU_CENTER, SBU_DEFAULT_ZOOM } from "@/lib/utils/maps";
+import { useTransit } from "@/lib/stores/transit-store";
+import { RouteLines } from "./route-lines";
+import { StopMarkers } from "./stop-markers";
+import { BusMarkers } from "./bus-markers";
+import { ZoomControls } from "./zoom-controls";
+import type { Route, Stop, Vehicle } from "@/lib/api/types";
 
 interface MapViewProps {
   routes: Route[];
@@ -17,7 +17,7 @@ interface MapViewProps {
 }
 
 export function MapView({ routes, stops, vehicles }: MapViewProps) {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID;
 
   return (
@@ -30,8 +30,8 @@ export function MapView({ routes, stops, vehicles }: MapViewProps) {
         gestureHandling="greedy"
         clickableIcons={false}
         className="w-full h-full"
-        style={{ width: '100%', height: '100%' }}
-        colorScheme={'FOLLOW_SYSTEM' as google.maps.ColorScheme}
+        style={{ width: "100%", height: "100%" }}
+        colorScheme={"FOLLOW_SYSTEM" as google.maps.ColorScheme}
       >
         <RouteLines routes={routes} />
         <StopMarkers stops={stops} routes={routes} />

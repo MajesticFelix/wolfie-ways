@@ -6,6 +6,7 @@ import { useVehicles } from "@/lib/hooks/use-vehicles";
 import { useAnnouncements } from "@/lib/hooks/use-announcements";
 import { MapView } from "@/components/map/map-view";
 import { RouteSelector } from "@/components/controls/route-selector";
+import { NearestStopsPanel } from "@/components/controls/nearest-stops-panel";
 import { AnnouncementBanner } from "@/components/announcements/announcement-banner";
 import { BottomSheet } from "@/components/panels/bottom-sheet";
 import { Bus, RefreshCw, AlertCircle } from "lucide-react";
@@ -111,6 +112,11 @@ function AppContent() {
           {/* Route selector card */}
           <div className="w-56 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border border-zinc-200/70 dark:border-zinc-800/60 rounded-2xl shadow-lg overflow-hidden">
             <RouteSelector routes={routes} />
+          </div>
+
+          {/* Nearest stops card */}
+          <div className="w-56 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border border-zinc-200/70 dark:border-zinc-800/60 rounded-2xl shadow-lg overflow-hidden">
+            <NearestStopsPanel stops={stops} routes={routes} />
           </div>
         </div>
       )}

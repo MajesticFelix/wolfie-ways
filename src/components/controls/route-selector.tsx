@@ -1,7 +1,9 @@
 'use client';
 
 import { memo } from 'react';
+import { Pin } from 'lucide-react';
 import { useTransit } from '@/lib/stores/transit-store';
+import { usePinnedRoutes } from '@/lib/hooks/use-pinned-routes';
 import { normalizeColor } from '@/lib/utils/maps';
 import type { Route } from '@/lib/api/types';
 
@@ -11,18 +13,25 @@ interface RouteSelectorProps {
 
 export const RouteSelector = memo(function RouteSelector({ routes }: RouteSelectorProps) {
   const { state, toggleRoute, selectAllRoutes, isRouteVisible } = useTransit();
+  const { pinned, togglePin } = usePinnedRoutes();
   const allSelected = state.selectedRoutes.size === 0;
 
   if (routes.length === 0) return null;
 
   const activeCount = allSelected ? routes.length : state.selectedRoutes.size;
 
+  // Pinned routes first, then the rest in original order
+  const sorted = [
+    ...routes.filter((r) => pinned.has(r.id)),
+    ...routes.filter((r) => !pinned.has(r.id)),
+  ];
+
   return (
     <div className="w-full select-none">
       {/* Panel header */}
       <div className="flex items-center justify-between px-3.5 pt-3 pb-2">
         <span className="text-[10px] font-black tracking-[0.18em] uppercase text-black dark:text-white">
-          Lines
+          Lines Today
         </span>
         <span className="text-[10px] font-mono tabular-nums text-black dark:text-white">
           {activeCount}/{routes.length}
@@ -73,16 +82,22 @@ export const RouteSelector = memo(function RouteSelector({ routes }: RouteSelect
         className="flex flex-col pb-2 max-h-[calc(100dvh-13rem)] overflow-y-auto"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {routes.map((route) => {
+        {sorted.map((route) => {
           const active = isRouteVisible(route.id) && !allSelected;
           const color = normalizeColor(route.color);
+          const isPinned = pinned.has(route.id);
           return (
             <RouteRow
               key={route.id}
               route={route}
               active={active}
               color={color}
+              isPinned={isPinned}
               onToggle={() => toggleRoute(route.id)}
+              onTogglePin={(e) => {
+                e.stopPropagation();
+                togglePin(route.id);
+              }}
             />
           );
         })}
@@ -95,25 +110,22 @@ interface RouteRowProps {
   route: Route;
   active: boolean;
   color: string;
+  isPinned: boolean;
   onToggle: () => void;
+  onTogglePin: (e: React.MouseEvent) => void;
 }
 
-const RouteRow = memo(function RouteRow({ route, active, color, onToggle }: RouteRowProps) {
+const RouteRow = memo(function RouteRow({ route, active, color, isPinned, onToggle, onTogglePin }: RouteRowProps) {
   return (
     <div className="px-2">
-      <button
+      <div
+        className="w-full flex items-center gap-2.5 py-2 px-2.5 rounded-lg transition-all duration-200 group relative overflow-hidden cursor-pointer"
+        style={active ? { backgroundColor: `${color}18` } : undefined}
         onClick={onToggle}
-        aria-pressed={active}
-        className="w-full flex items-center gap-2.5 py-2 px-2.5 rounded-lg text-left transition-all duration-200 group relative overflow-hidden"
-        style={
-          active
-            ? { backgroundColor: `${color}18`, color: 'inherit' }
-            : undefined
-        }
       >
         {/* Hover bg (inactive only) */}
         {!active && (
-          <span className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/4 dark:group-hover:bg-white/4 transition-colors duration-150" />
+          <span className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/4 dark:group-hover:bg-white/4 transition-colors duration-150 pointer-events-none" />
         )}
 
         {/* Left color accent bar */}
@@ -129,7 +141,7 @@ const RouteRow = memo(function RouteRow({ route, active, color, onToggle }: Rout
 
         {/* Route name */}
         <span
-          className={`text-sm leading-snug transition-colors duration-200 ${
+          className={`flex-1 text-sm leading-snug transition-colors duration-200 ${
             active
               ? 'font-semibold text-zinc-900 dark:text-white'
               : 'font-medium text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-800 dark:group-hover:text-zinc-200'
@@ -138,14 +150,23 @@ const RouteRow = memo(function RouteRow({ route, active, color, onToggle }: Rout
           {route.name}
         </span>
 
-        {/* Active indicator dot */}
-        {active && (
-          <div
-            className="ml-auto w-1.5 h-1.5 rounded-full shrink-0"
-            style={{ backgroundColor: color }}
+        {/* Pin button */}
+        <button
+          onClick={onTogglePin}
+          aria-label={isPinned ? `Unpin ${route.name}` : `Pin ${route.name}`}
+          className={`relative z-10 p-0.5 rounded transition-all duration-150 ${
+            isPinned
+              ? 'opacity-100'
+              : 'opacity-0 group-hover:opacity-100'
+          }`}
+          style={{ color: isPinned ? color : undefined }}
+        >
+          <Pin
+            className="w-3 h-3"
+            style={isPinned ? { fill: color, color } : { color: '#9ca3af' }}
           />
-        )}
-      </button>
+        </button>
+      </div>
     </div>
   );
 });
