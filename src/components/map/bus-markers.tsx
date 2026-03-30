@@ -3,7 +3,8 @@
 import { AdvancedMarker } from "@vis.gl/react-google-maps";
 import { memo } from "react";
 import { useTransit } from "@/lib/stores/transit-store";
-import { normalizeColor } from "@/lib/utils/maps";
+import { resolveRouteColor } from "@/lib/utils/maps";
+import { useDarkMode } from "@/lib/hooks/use-dark-mode";
 import type { Vehicle, Route } from "@/lib/api/types";
 
 interface BusMarkersProps {
@@ -16,21 +17,30 @@ export const BusMarkers = memo(function BusMarkers({
   routes,
 }: BusMarkersProps) {
   const { selectBus, state } = useTransit();
+  const isDark = useDarkMode();
 
   const routeMap = new Map(routes.map((r) => [r.id, r]));
+
+  // Effective vehicle filter: mirrors the route visibility logic in RouteLines/StopMarkers.
+  // Bus selected → only buses on that route. Stop selected → only buses on routes serving that stop.
   const visibleVehicles = vehicles.filter((v) => {
-    // Always show the selected bus even if its route is filtered
-    if (v.equipmentID === state.selectedBus) return true;
-    return (
-      state.selectedRoutes.size === 0 || state.selectedRoutes.has(v.routeID)
-    );
+    if (state.selectedBus) {
+      const selectedBusObj = vehicles.find((b) => b.equipmentID === state.selectedBus);
+      return v.routeID === selectedBusObj?.routeID;
+    }
+    if (state.selectedStop != null) {
+      const servesStop = routes.some((r) => r.id === v.routeID && r.stops.includes(state.selectedStop!));
+      if (!servesStop) return false;
+      return state.selectedRoutes.size === 0 || state.selectedRoutes.has(v.routeID);
+    }
+    return state.selectedRoutes.size === 0 || state.selectedRoutes.has(v.routeID);
   });
 
   return (
     <>
       {visibleVehicles.map((vehicle) => {
         const route = routeMap.get(vehicle.routeID);
-        const color = normalizeColor(route?.color ?? "#3B82F6");
+        const color = resolveRouteColor(route?.color ?? "#3B82F6", isDark);
         const isSelected = state.selectedBus === vehicle.equipmentID;
 
         return (

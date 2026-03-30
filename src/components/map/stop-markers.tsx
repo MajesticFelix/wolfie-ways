@@ -4,24 +4,39 @@ import { AdvancedMarker } from '@vis.gl/react-google-maps';
 import { memo } from 'react';
 import { useTransit } from '@/lib/stores/transit-store';
 import { useDarkMode } from '@/lib/hooks/use-dark-mode';
-import { deduplicateStops, normalizeColor } from '@/lib/utils/maps';
-import type { Stop, Route } from '@/lib/api/types';
+import { deduplicateStops, resolveRouteColor } from '@/lib/utils/maps';
+import type { Stop, Route, Vehicle } from '@/lib/api/types';
 
 interface StopMarkersProps {
   stops: Stop[];
   routes: Route[];
+  vehicles: Vehicle[];
 }
 
-export const StopMarkers = memo(function StopMarkers({ stops, routes }: StopMarkersProps) {
-  const { selectStop, panMap, isRouteVisible, state } = useTransit();
+export const StopMarkers = memo(function StopMarkers({ stops, routes, vehicles }: StopMarkersProps) {
+  const { selectStop, panMap, state } = useTransit();
   const isDark = useDarkMode();
+
+  // Effective visibility: selection-based filter intersects with the manual route filter.
+  const isEffectivelyVisible = (routeId: number): boolean => {
+    if (state.selectedBus) {
+      const bus = vehicles.find((v) => v.equipmentID === state.selectedBus);
+      return bus ? routeId === bus.routeID : false;
+    }
+    if (state.selectedStop != null) {
+      const servesStop = routes.some((r) => r.id === routeId && r.stops.includes(state.selectedStop!));
+      if (!servesStop) return false;
+      return state.selectedRoutes.size === 0 || state.selectedRoutes.has(routeId);
+    }
+    return state.selectedRoutes.size === 0 || state.selectedRoutes.has(routeId);
+  };
 
   const stopColors = new Map<number, string[]>();
   for (const route of routes) {
-    if (!isRouteVisible(route.id)) continue;
+    if (!isEffectivelyVisible(route.id)) continue;
     for (const stopId of route.stops) {
       const existing = stopColors.get(stopId) ?? [];
-      stopColors.set(stopId, [...existing, normalizeColor(route.color)]);
+      stopColors.set(stopId, [...existing, resolveRouteColor(route.color, isDark)]);
     }
   }
 

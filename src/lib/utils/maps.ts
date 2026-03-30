@@ -42,6 +42,54 @@ export function normalizeColor(color: string): string {
   return color.startsWith('#') ? color : `#${color}`;
 }
 
+/**
+ * Normalize color and, in dark mode, replace near-black colors with a
+ * visible light gray so routes like Railroad remain legible.
+ */
+export function resolveRouteColor(color: string, isDark: boolean): string {
+  let c = normalizeColor(color);
+  // Expand 3-digit hex → 6-digit
+  if (c.length === 4) c = `#${c[1]}${c[1]}${c[2]}${c[2]}${c[3]}${c[3]}`;
+  if (isDark && c.length === 7) {
+    const r = parseInt(c.slice(1, 3), 16);
+    const g = parseInt(c.slice(3, 5), 16);
+    const b = parseInt(c.slice(5, 7), 16);
+    if (!isNaN(r + g + b) && r < 40 && g < 40 && b < 40) return '#C7C7C9';
+  }
+  return c;
+}
+
+/**
+ * Split a decoded polyline path wherever consecutive vertices are more than
+ * `maxDistDeg` degrees apart (straight-line). Returns the sub-paths and the
+ * original-path index at which each sub-path starts.
+ *
+ * This removes spurious long-haul segments (e.g. Railroad SAC → LIRR) that
+ * exist in the SPOT API encoded line data.
+ */
+export function splitPathAtJumps(
+  path: google.maps.LatLng[],
+  maxDistDeg = 0.005,
+): { paths: google.maps.LatLng[][]; startIndices: number[] } {
+  if (path.length === 0) return { paths: [], startIndices: [] };
+  const paths: google.maps.LatLng[][] = [];
+  const startIndices: number[] = [0];
+  let current: google.maps.LatLng[] = [path[0]];
+  for (let i = 1; i < path.length; i++) {
+    const dlat = path[i].lat() - path[i - 1].lat();
+    const dlng = path[i].lng() - path[i - 1].lng();
+    if (Math.sqrt(dlat * dlat + dlng * dlng) > maxDistDeg) {
+      paths.push(current);
+      current = [path[i]];
+      startIndices.push(i);
+    } else {
+      current.push(path[i]);
+    }
+  }
+  paths.push(current);
+  return { paths, startIndices };
+}
+
 /** Compute load percentage */
 export function loadPercent(load: number, capacity: number): number {
   if (capacity <= 0) return 0;

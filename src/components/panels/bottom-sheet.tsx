@@ -47,17 +47,6 @@ export function BottomSheet({
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        className={`fixed inset-0 z-40 transition-opacity duration-300 ${
-          open
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
-        }`}
-        onClick={clearSelection}
-        aria-hidden="true"
-      />
-
       {/* Right side panel */}
       <aside
         className={`fixed top-0 right-0 bottom-0 z-50 w-[400px] flex flex-col bg-white dark:bg-zinc-950 border-l border-zinc-200 dark:border-zinc-800/80 shadow-2xl transition-transform duration-300 ease-in-out ${

@@ -6,6 +6,7 @@ interface TransitState {
   selectedRoutes: Set<number>;
   selectedStop: number | null;
   selectedBus: string | null;
+  busSelectionKey: number; // increments on every SELECT_BUS, even for the same bus
   panelMode: 'stop' | 'bus' | null;
   mapTarget: { lat: number; lng: number; zoom?: number } | null;
   previousBus: string | null;   // set when navigating: bus → stop
@@ -30,9 +31,15 @@ function reducer(state: TransitState, action: Action): TransitState {
       const next = new Set(state.selectedRoutes);
       if (next.has(action.routeId)) next.delete(action.routeId);
       else next.add(action.routeId);
+      if (state.panelMode !== null) {
+        return { ...state, selectedRoutes: next, selectedStop: null, selectedBus: null, panelMode: null, previousBus: null, previousStop: null };
+      }
       return { ...state, selectedRoutes: next };
     }
     case 'SELECT_ALL_ROUTES':
+      if (state.panelMode !== null) {
+        return { ...state, selectedRoutes: new Set(), selectedStop: null, selectedBus: null, panelMode: null, previousBus: null, previousStop: null };
+      }
       return { ...state, selectedRoutes: new Set() };
     case 'SELECT_STOP':
       return {
@@ -47,6 +54,7 @@ function reducer(state: TransitState, action: Action): TransitState {
       return {
         ...state,
         selectedBus: action.busId,
+        busSelectionKey: state.busSelectionKey + 1,
         selectedStop: null,
         panelMode: 'bus',
         previousBus: null,
@@ -56,6 +64,7 @@ function reducer(state: TransitState, action: Action): TransitState {
       return {
         ...state,
         selectedBus: action.busId,
+        busSelectionKey: state.busSelectionKey + 1,
         selectedStop: null,
         panelMode: 'bus',
         previousBus: null,
@@ -103,6 +112,7 @@ const initialState: TransitState = {
   selectedRoutes: new Set(),
   selectedStop: null,
   selectedBus: null,
+  busSelectionKey: 0,
   panelMode: null,
   mapTarget: null,
   previousBus: null,
