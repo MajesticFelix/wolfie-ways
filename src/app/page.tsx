@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { TransitProvider } from '@/lib/stores/transit-store';
-import { useTransitData } from '@/lib/hooks/use-transit-data';
-import { useVehicles } from '@/lib/hooks/use-vehicles';
-import { useAnnouncements } from '@/lib/hooks/use-announcements';
-import { MapView } from '@/components/map/map-view';
-import { RouteSelector } from '@/components/controls/route-selector';
-import { AnnouncementBanner } from '@/components/announcements/announcement-banner';
-import { BottomSheet } from '@/components/panels/bottom-sheet';
-import { Bus, RefreshCw, AlertCircle } from 'lucide-react';
+import { TransitProvider } from "@/lib/stores/transit-store";
+import { useTransitData } from "@/lib/hooks/use-transit-data";
+import { useVehicles } from "@/lib/hooks/use-vehicles";
+import { useAnnouncements } from "@/lib/hooks/use-announcements";
+import { MapView } from "@/components/map/map-view";
+import { RouteSelector } from "@/components/controls/route-selector";
+import { AnnouncementBanner } from "@/components/announcements/announcement-banner";
+import { BottomSheet } from "@/components/panels/bottom-sheet";
+import { Bus, RefreshCw, AlertCircle } from "lucide-react";
 
 export default function Home() {
   return (
@@ -19,8 +19,18 @@ export default function Home() {
 }
 
 function AppContent() {
-  const { routes, stops, stopImages, isLoading: staticLoading, error: staticError } = useTransitData();
-  const { vehicles, isLoading: vehiclesLoading, refresh: refreshVehicles } = useVehicles();
+  const {
+    routes,
+    stops,
+    stopImages,
+    isLoading: staticLoading,
+    error: staticError,
+  } = useTransitData();
+  const {
+    vehicles,
+    isLoading: vehiclesLoading,
+    refresh: refreshVehicles,
+  } = useVehicles();
   const { data: announcementGroups } = useAnnouncements();
 
   const isInitialLoad = staticLoading && routes.length === 0;
@@ -41,7 +51,9 @@ function AppContent() {
             <Bus className="w-9 h-9 text-white" />
           </div>
           <div className="text-center">
-            <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Wolfie Ways</p>
+            <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              Wolfie Ways
+            </p>
             <p className="text-sm text-zinc-500 mt-1">Loading bus data…</p>
           </div>
         </div>
@@ -59,7 +71,7 @@ function AppContent() {
       {!isInitialLoad && (
         <div
           className="absolute top-0 left-0 z-20 flex flex-col gap-2 p-3"
-          style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+          style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
         >
           {/* Header row: logo | live count | refresh */}
           <div className="flex items-center gap-2">
@@ -68,7 +80,9 @@ function AppContent() {
               <div className="w-6 h-6 rounded-lg bg-red-600 flex items-center justify-center shrink-0">
                 <Bus className="w-3.5 h-3.5 text-white" />
               </div>
-              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Wolfie Ways</span>
+              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                Wolfie Ways
+              </span>
             </div>
 
             {/* Live bus count badge */}
@@ -88,7 +102,9 @@ function AppContent() {
               className="w-10 h-10 flex items-center justify-center rounded-2xl bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border border-zinc-200/70 dark:border-zinc-800/60 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors shadow-lg disabled:opacity-50"
               aria-label="Refresh bus positions"
             >
-              <RefreshCw className={`w-4 h-4 ${vehiclesLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`w-4 h-4 ${vehiclesLoading ? "animate-spin" : ""}`}
+              />
             </button>
           </div>
 
@@ -100,14 +116,16 @@ function AppContent() {
       )}
 
       {/* Bottom-left: announcements */}
-      {!isInitialLoad && announcementGroups && announcementGroups.length > 0 && (
-        <div
-          className="absolute left-3 z-20"
-          style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
-        >
-          <AnnouncementBanner groups={announcementGroups} />
-        </div>
-      )}
+      {!isInitialLoad &&
+        announcementGroups &&
+        announcementGroups.length > 0 && (
+          <div
+            className="absolute left-3 z-20"
+            style={{ bottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+          >
+            <AnnouncementBanner groups={announcementGroups} />
+          </div>
+        )}
 
       {/* Details panel (bus or stop) */}
       {!isInitialLoad && (

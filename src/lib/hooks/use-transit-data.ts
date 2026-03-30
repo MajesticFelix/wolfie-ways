@@ -1,8 +1,14 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { fetchRoutes, fetchStops, fetchPatterns, fetchStopImages, fetchVersionId } from '@/lib/api/spot-client';
-import type { Route, Stop, Pattern, StopImage } from '@/lib/api/types';
+import { useEffect, useRef, useState } from "react";
+import {
+  fetchRoutes,
+  fetchStops,
+  fetchPatterns,
+  fetchStopImages,
+  fetchVersionId,
+} from "@/lib/api/spot-client";
+import type { Route, Stop, Pattern, StopImage } from "@/lib/api/types";
 
 const VERSION_POLL_INTERVAL = 30_000;
 
@@ -19,7 +25,9 @@ export function useTransitData(): TransitStaticData {
   const [routes, setRoutes] = useState<Route[]>([]);
   const [stops, setStops] = useState<Stop[]>([]);
   const [patterns, setPatterns] = useState<Pattern[]>([]);
-  const [stopImages, setStopImages] = useState<Map<number, StopImage>>(new Map());
+  const [stopImages, setStopImages] = useState<Map<number, StopImage>>(
+    new Map(),
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const lastVersionRef = useRef<number | null>(null);
@@ -50,7 +58,7 @@ export function useTransitData(): TransitStaticData {
     loadStaticData();
 
     const checkVersion = async () => {
-      if (document.visibilityState === 'hidden') return;
+      if (document.visibilityState === "hidden") return;
       try {
         const v = await fetchVersionId();
         if (lastVersionRef.current !== null && lastVersionRef.current !== v) {
