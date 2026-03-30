@@ -2,11 +2,12 @@
 
 import { Users, MapPin, Clock, ArrowLeft } from "lucide-react";
 import {
-  normalizeColor,
+  resolveRouteColor,
   formatEtaSeconds,
   formatEtaMinutes,
   loadPercent,
 } from "@/lib/utils/maps";
+import { useDarkMode } from "@/lib/hooks/use-dark-mode";
 import { useTransit } from "@/lib/stores/transit-store";
 import type { Vehicle, Route, Stop } from "@/lib/api/types";
 import { BusIcon } from "../map/bus-markers";
@@ -21,7 +22,8 @@ interface BusPanelProps {
 
 export function BusPanel({ vehicle, route, nextStop, stops, previousStop }: BusPanelProps) {
   const { selectStop, panMap, backToStop } = useTransit();
-  const color = normalizeColor(route?.color ?? "#3B82F6");
+  const isDark = useDarkMode();
+  const color = resolveRouteColor(route?.color ?? "#3B82F6", isDark);
   const loadPct = loadPercent(vehicle.load, vehicle.capacity);
 
   const loadColor =

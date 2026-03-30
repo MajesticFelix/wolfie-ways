@@ -8,12 +8,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useStopETAs, useStopSchedules } from "@/lib/hooks/use-stop-etas";
 import { useTransit } from "@/lib/stores/transit-store";
 import {
-  normalizeColor,
+  resolveRouteColor,
   formatEtaMinutes,
   formatTime12h,
   parseAmenities,
   stopImageUrl,
 } from "@/lib/utils/maps";
+import { useDarkMode } from "@/lib/hooks/use-dark-mode";
 import type { Stop, Route, StopImage, Vehicle } from "@/lib/api/types";
 import { BusIcon } from "../map/bus-markers";
 
@@ -35,7 +36,8 @@ export function StopPanel({
   previousBusRoute,
 }: StopPanelProps) {
   const [showSchedule, setShowSchedule] = useState(false);
-  const { selectBusFromStop, panMap, backToBus } = useTransit();
+  const { selectBusFromStop, panMap, backToBus, state } = useTransit();
+  const isDark = useDarkMode();
   const { data: etas, isLoading: etasLoading } = useStopETAs(stop.id);
   const { data: schedules } = useStopSchedules(showSchedule ? stop.id : null);
 
@@ -43,10 +45,19 @@ export function StopPanel({
   const vehicleMap = new Map(vehicles.map((v) => [v.equipmentID, v]));
   const amenities = parseAmenities(stopImage?.amenities ?? "");
 
-  const allETAs = etas?.flatMap((e) => e.enRoute) ?? [];
-  const sortedETAs = [...allETAs].sort((a, b) => a.minutes - b.minutes);
+  const hasRouteFilter = state.selectedRoutes.size > 0;
 
-  const prevColor = normalizeColor(previousBusRoute?.color ?? "#3B82F6");
+  const allETAs = etas?.flatMap((e) => e.enRoute) ?? [];
+  const sortedETAs = [...allETAs]
+    .filter((e) => !hasRouteFilter || state.selectedRoutes.has(e.routeID))
+    .sort((a, b) => a.minutes - b.minutes);
+
+  // Filter schedules by selected routes (corridorID maps to route ID)
+  const filteredSchedules = hasRouteFilter && schedules
+    ? schedules.filter((s) => state.selectedRoutes.has(s.corridorID))
+    : schedules;
+
+  const prevColor = resolveRouteColor(previousBusRoute?.color ?? "#3B82F6", isDark);
 
   function handleETAClick(equipmentID: string, routeName: string) {
     // "-" means the bus is scheduled but not yet dispatched
@@ -175,7 +186,7 @@ export function StopPanel({
           <div className="flex flex-col gap-2">
             {sortedETAs.slice(0, 6).map((eta, i) => {
               const route = routeMap.get(eta.routeID);
-              const color = normalizeColor(route?.color ?? "#3B82F6");
+              const color = resolveRouteColor(route?.color ?? "#3B82F6", isDark);
               const isLive = eta.equipmentID !== "-" && vehicleMap.has(eta.equipmentID);
 
               return (
@@ -239,9 +250,9 @@ export function StopPanel({
         {showSchedule ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </button>
 
-      {showSchedule && schedules && schedules.length > 0 && (
+      {showSchedule && filteredSchedules && filteredSchedules.length > 0 && (
         <div className="flex flex-col gap-1 -mt-2">
-          {schedules.slice(0, 20).map((s, i) => (
+          {filteredSchedules.slice(0, 20).map((s, i) => (
             <div
               key={i}
               className="flex items-center justify-between px-3 py-2 rounded-lg odd:bg-zinc-100/60 dark:odd:bg-zinc-800/30"

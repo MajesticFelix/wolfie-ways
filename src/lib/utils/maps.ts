@@ -50,11 +50,14 @@ export function resolveRouteColor(color: string, isDark: boolean): string {
   let c = normalizeColor(color);
   // Expand 3-digit hex → 6-digit
   if (c.length === 4) c = `#${c[1]}${c[1]}${c[2]}${c[2]}${c[3]}${c[3]}`;
-  if (isDark && c.length === 7) {
+  if (c.length === 7) {
     const r = parseInt(c.slice(1, 3), 16);
     const g = parseInt(c.slice(3, 5), 16);
     const b = parseInt(c.slice(5, 7), 16);
-    if (!isNaN(r + g + b) && r < 40 && g < 40 && b < 40) return '#C7C7C9';
+    // Replace near-black (e.g. Railroad) with a softer color in both modes
+    if (!isNaN(r + g + b) && r < 40 && g < 40 && b < 40) {
+      return isDark ? '#C7C7C9' : '#626267ff';
+    }
   }
   return c;
 }

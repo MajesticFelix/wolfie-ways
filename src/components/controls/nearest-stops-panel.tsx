@@ -4,7 +4,8 @@ import { MapPin, Navigation, LocateFixed, WifiOff } from 'lucide-react';
 import { memo } from 'react';
 import { useNearestStops } from '@/lib/hooks/use-nearest-stops';
 import { useTransit } from '@/lib/stores/transit-store';
-import { normalizeColor } from '@/lib/utils/maps';
+import { resolveRouteColor } from '@/lib/utils/maps';
+import { useDarkMode } from '@/lib/hooks/use-dark-mode';
 import type { Stop, Route } from '@/lib/api/types';
 
 interface NearestStopsPanelProps {
@@ -15,11 +16,12 @@ interface NearestStopsPanelProps {
 export const NearestStopsPanel = memo(function NearestStopsPanel({ stops, routes }: NearestStopsPanelProps) {
   const { geoState, nearest, requestLocation } = useNearestStops(stops);
   const { selectStop, panMap } = useTransit();
+  const isDark = useDarkMode();
 
   // Build stopId → route colors map
   const stopRouteColors = new Map<number, string[]>();
   for (const route of routes) {
-    const color = normalizeColor(route.color);
+    const color = resolveRouteColor(route.color, isDark);
     for (const stopId of route.stops) {
       const existing = stopRouteColors.get(stopId) ?? [];
       if (!existing.includes(color)) stopRouteColors.set(stopId, [...existing, color]);

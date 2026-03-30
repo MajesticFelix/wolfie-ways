@@ -4,7 +4,8 @@ import { memo } from 'react';
 import { Pin } from 'lucide-react';
 import { useTransit } from '@/lib/stores/transit-store';
 import { usePinnedRoutes } from '@/lib/hooks/use-pinned-routes';
-import { normalizeColor } from '@/lib/utils/maps';
+import { resolveRouteColor } from '@/lib/utils/maps';
+import { useDarkMode } from '@/lib/hooks/use-dark-mode';
 import type { Route } from '@/lib/api/types';
 
 interface RouteSelectorProps {
@@ -14,6 +15,7 @@ interface RouteSelectorProps {
 export const RouteSelector = memo(function RouteSelector({ routes }: RouteSelectorProps) {
   const { state, toggleRoute, selectAllRoutes, isRouteVisible } = useTransit();
   const { pinned, togglePin } = usePinnedRoutes();
+  const isDark = useDarkMode();
   const allSelected = state.selectedRoutes.size === 0;
 
   if (routes.length === 0) return null;
@@ -58,7 +60,7 @@ export const RouteSelector = memo(function RouteSelector({ routes }: RouteSelect
                 style={{
                   width: 5,
                   height: 5,
-                  backgroundColor: normalizeColor(r.color),
+                  backgroundColor: resolveRouteColor(r.color, isDark),
                   opacity: allSelected ? 1 : 0.35,
                 }}
               />
@@ -84,7 +86,7 @@ export const RouteSelector = memo(function RouteSelector({ routes }: RouteSelect
       >
         {sorted.map((route) => {
           const active = isRouteVisible(route.id) && !allSelected;
-          const color = normalizeColor(route.color);
+          const color = resolveRouteColor(route.color, isDark);
           const isPinned = pinned.has(route.id);
           return (
             <RouteRow

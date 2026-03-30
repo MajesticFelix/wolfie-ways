@@ -93,10 +93,11 @@ const BusPin = memo(function BusPin({
       <div
         style={{
           position: "absolute",
-          top: 0,
+          top: 5,
           left: "50%",
           transform: `translateX(-50%) rotate(${heading}deg)`,
-          transformOrigin: "50% 100%",
+          transformOrigin: "50% 36px",
+          zIndex: 2,
           color: "white",
           fontSize: 15,
           lineHeight: 1,
@@ -157,7 +158,7 @@ const BusPin = memo(function BusPin({
             lineHeight: "14px",
           }}
         >
-          {routeAbbr}
+          {routeAbbr === "IL" ? "Inner" : routeAbbr}
         </div>
       )}
     </div>
