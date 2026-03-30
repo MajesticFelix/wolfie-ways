@@ -1,12 +1,19 @@
-'use client';
+"use client";
 
-import { Clock, Bus, MapPin, ChevronDown, ChevronUp, Wifi } from 'lucide-react';
-import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useStopETAs, useStopSchedules } from '@/lib/hooks/use-stop-etas';
-import { normalizeColor, formatEtaMinutes, formatTime12h, parseAmenities, stopImageUrl } from '@/lib/utils/maps';
-import type { Stop, Route, StopImage } from '@/lib/api/types';
+import { Clock, MapPin, ChevronDown, ChevronUp, Wifi } from "lucide-react";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useStopETAs, useStopSchedules } from "@/lib/hooks/use-stop-etas";
+import {
+  normalizeColor,
+  formatEtaMinutes,
+  formatTime12h,
+  parseAmenities,
+  stopImageUrl,
+} from "@/lib/utils/maps";
+import type { Stop, Route, StopImage } from "@/lib/api/types";
+import { BusIcon } from "../map/bus-markers";
 
 interface StopPanelProps {
   stop: Stop;
@@ -20,7 +27,10 @@ export function StopPanel({ stop, routes, stopImage }: StopPanelProps) {
   const { data: schedules } = useStopSchedules(showSchedule ? stop.id : null);
 
   const routeMap = new Map(routes.map((r) => [r.id, r]));
-  const amenities = parseAmenities(stopImage?.amenities ?? '');
+  const amenities = parseAmenities(stopImage?.amenities ?? "");
+
+  console.log(schedules);
+  console.log(etas);
 
   const allETAs = etas?.flatMap((e) => e.enRoute) ?? [];
   const sortedETAs = [...allETAs].sort((a, b) => a.minutes - b.minutes);
@@ -33,9 +43,13 @@ export function StopPanel({ stop, routes, stopImage }: StopPanelProps) {
           <MapPin className="w-5 h-5 text-zinc-500 dark:text-zinc-300" />
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-base text-zinc-900 dark:text-zinc-100 leading-tight">{stop.name}</h2>
+          <h2 className="font-semibold text-base text-zinc-900 dark:text-zinc-100 leading-tight">
+            {stop.name}
+          </h2>
           {stop.shortName && stop.shortName !== stop.name && (
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{stop.shortName}</p>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
+              {stop.shortName}
+            </p>
           )}
         </div>
       </div>
@@ -72,25 +86,32 @@ export function StopPanel({ stop, routes, stopImage }: StopPanelProps) {
       <div>
         <div className="flex items-center gap-2 mb-2">
           <Wifi className="w-4 h-4 text-green-500" />
-          <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wide">Live Arrivals</span>
+          <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wide">
+            Live Arrivals
+          </span>
         </div>
 
         {etasLoading ? (
           <div className="flex flex-col gap-2">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-12 rounded-xl bg-zinc-200 dark:bg-zinc-800" />
+              <Skeleton
+                key={i}
+                className="h-12 rounded-xl bg-zinc-200 dark:bg-zinc-800"
+              />
             ))}
           </div>
         ) : sortedETAs.length === 0 ? (
           <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-100/80 dark:bg-zinc-800/50 border border-zinc-200/60 dark:border-zinc-700/50">
             <Clock className="w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-            <span className="text-sm text-zinc-400 dark:text-zinc-500">No buses en route</span>
+            <span className="text-sm text-zinc-400 dark:text-zinc-500">
+              No buses en route
+            </span>
           </div>
         ) : (
           <div className="flex flex-col gap-2">
             {sortedETAs.slice(0, 6).map((eta, i) => {
               const route = routeMap.get(eta.routeID);
-              const color = normalizeColor(route?.color ?? '#3B82F6');
+              const color = normalizeColor(route?.color ?? "#3B82F6");
 
               return (
                 <div
@@ -101,25 +122,31 @@ export function StopPanel({ stop, routes, stopImage }: StopPanelProps) {
                     className="w-1 h-8 rounded-full shrink-0"
                     style={{ backgroundColor: color }}
                   />
-                  <Bus className="w-4 h-4 text-zinc-400 dark:text-zinc-400 shrink-0" />
+                  <BusIcon />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
                       {route?.name ?? `Route ${eta.routeID}`}
                     </p>
                     {eta.direction && (
-                      <p className="text-xs text-zinc-400 dark:text-zinc-500">{eta.direction}</p>
+                      <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                        {eta.direction}
+                      </p>
                     )}
                   </div>
                   <div className="text-right shrink-0">
                     <span
                       className={`text-sm font-bold tabular-nums ${
-                        eta.minutes <= 1 ? 'text-green-500 dark:text-green-400' : 'text-zinc-900 dark:text-zinc-100'
+                        eta.minutes <= 1
+                          ? "text-green-500 dark:text-green-400"
+                          : "text-zinc-900 dark:text-zinc-100"
                       }`}
                     >
                       {formatEtaMinutes(eta.minutes)}
                     </span>
                     {eta.time && (
-                      <p className="text-xs text-zinc-400 dark:text-zinc-500">{formatTime12h(eta.time)}</p>
+                      <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                        {formatTime12h(eta.time)}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -135,7 +162,11 @@ export function StopPanel({ stop, routes, stopImage }: StopPanelProps) {
         className="flex items-center justify-between w-full p-3 rounded-xl bg-zinc-100/60 dark:bg-zinc-800/40 border border-zinc-200/40 dark:border-zinc-700/40 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
       >
         <span className="font-medium">Full Schedule</span>
-        {showSchedule ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        {showSchedule ? (
+          <ChevronUp className="w-4 h-4" />
+        ) : (
+          <ChevronDown className="w-4 h-4" />
+        )}
       </button>
 
       {showSchedule && schedules && schedules.length > 0 && (
@@ -145,8 +176,12 @@ export function StopPanel({ stop, routes, stopImage }: StopPanelProps) {
               key={i}
               className="flex items-center justify-between px-3 py-2 rounded-lg odd:bg-zinc-100/60 dark:odd:bg-zinc-800/30"
             >
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">{s.scheduleName || s.directionLabel}</span>
-              <span className="text-xs font-mono text-zinc-700 dark:text-zinc-300">{formatTime12h(s.stopTime)}</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                {s.scheduleName || s.directionLabel}
+              </span>
+              <span className="text-xs font-mono text-zinc-700 dark:text-zinc-300">
+                {formatTime12h(s.stopTime)}
+              </span>
             </div>
           ))}
         </div>
