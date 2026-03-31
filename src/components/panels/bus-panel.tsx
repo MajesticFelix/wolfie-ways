@@ -1,12 +1,13 @@
 "use client";
 
-import { Users, MapPin, Clock } from "lucide-react";
+import { Users, MapPin, Clock, ArrowLeft, Pin } from "lucide-react";
 import {
-  normalizeColor,
+  resolveRouteColor,
   formatEtaSeconds,
   formatEtaMinutes,
   loadPercent,
 } from "@/lib/utils/maps";
+import { useDarkMode } from "@/lib/hooks/use-dark-mode";
 import { useTransit } from "@/lib/stores/transit-store";
 import type { Vehicle, Route, Stop } from "@/lib/api/types";
 import { BusIcon } from "../map/bus-markers";
@@ -16,11 +17,13 @@ interface BusPanelProps {
   route?: Route;
   nextStop?: Stop;
   stops?: Map<number, Stop>;
+  previousStop?: Stop;
 }
 
-export function BusPanel({ vehicle, route, nextStop, stops }: BusPanelProps) {
-  const { selectStop, panMap } = useTransit();
-  const color = normalizeColor(route?.color ?? "#3B82F6");
+export function BusPanel({ vehicle, route, nextStop, stops, previousStop }: BusPanelProps) {
+  const { selectStop, panMap, backToStop, state, togglePinnedRoute } = useTransit();
+  const isDark = useDarkMode();
+  const color = resolveRouteColor(route?.color ?? "#3B82F6", isDark);
   const loadPct = loadPercent(vehicle.load, vehicle.capacity);
 
   const loadColor =
@@ -45,7 +48,8 @@ export function BusPanel({ vehicle, route, nextStop, stops }: BusPanelProps) {
   return (
     <div className="flex flex-col gap-4">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
         <div
           className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
           style={{ backgroundColor: color, boxShadow: `0 0 0 2px ${color}40` }}
@@ -63,6 +67,49 @@ export function BusPanel({ vehicle, route, nextStop, stops }: BusPanelProps) {
           )}
         </div>
       </div>
+        {route && (
+          <button
+            onClick={() => togglePinnedRoute(route.id)}
+            className={`flex items-center justify-center shrink-0 w-11 h-11 rounded-full transition-colors ${
+              state.pinnedRoutes.has(route.id)
+                ? "bg-amber-100/50 dark:bg-amber-900/30 text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                : "bg-zinc-100/80 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 dark:text-zinc-500"
+            }`}
+            aria-label={
+              state.pinnedRoutes.has(route.id)
+                ? `Unpin ${route.name}`
+                : `Pin ${route.name}`
+            }
+          >
+            <Pin
+              className="w-5 h-5"
+              fill={state.pinnedRoutes.has(route.id) ? "currentColor" : "none"}
+            />
+          </button>
+        )}
+      </div>
+
+      {/* Back to stop button */}
+      {previousStop && (
+        <button
+          onClick={() => {
+            backToStop();
+            panMap(previousStop.lat, previousStop.lng, 18);
+          }}
+          className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl border border-zinc-200/60 dark:border-zinc-700/40 bg-zinc-100/60 dark:bg-zinc-800/40 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/40 transition-colors text-left"
+        >
+          <ArrowLeft className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
+          <MapPin className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
+          <div className="min-w-0">
+            <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block">
+              Back to stop
+            </span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate block">
+              {previousStop.name}
+            </span>
+          </div>
+        </button>
+      )}
 
       {/* Next Stop — only show when etaArray is unavailable */}
       {!hasEtaStops && nextStop && (
@@ -107,7 +154,7 @@ export function BusPanel({ vehicle, route, nextStop, stops }: BusPanelProps) {
                 <div
                   key={`${eta.stopID}-${i}`}
                   onClick={() => {
-                    selectStop(eta.stopID);
+                    selectStop(eta.stopID, vehicle.equipmentID);
                     if (stop) panMap(stop.lat, stop.lng, 18);
                   }}
                   className={`flex items-center justify-between gap-3 px-3 py-3 cursor-pointer transition-colors hover:bg-zinc-200/60 dark:hover:bg-zinc-700/40 ${

@@ -42,6 +42,57 @@ export function normalizeColor(color: string): string {
   return color.startsWith('#') ? color : `#${color}`;
 }
 
+/**
+ * Normalize color and, in dark mode, replace near-black colors with a
+ * visible light gray so routes like Railroad remain legible.
+ */
+export function resolveRouteColor(color: string, isDark: boolean): string {
+  let c = normalizeColor(color);
+  // Expand 3-digit hex → 6-digit
+  if (c.length === 4) c = `#${c[1]}${c[1]}${c[2]}${c[2]}${c[3]}${c[3]}`;
+  if (c.length === 7) {
+    const r = parseInt(c.slice(1, 3), 16);
+    const g = parseInt(c.slice(3, 5), 16);
+    const b = parseInt(c.slice(5, 7), 16);
+    // Replace near-black (e.g. Railroad) with a softer color in both modes
+    if (!isNaN(r + g + b) && r < 40 && g < 40 && b < 40) {
+      return isDark ? '#C7C7C9' : '#626267ff';
+    }
+  }
+  return c;
+}
+
+/**
+ * Split a decoded polyline path wherever consecutive vertices are more than
+ * `maxDistDeg` degrees apart (straight-line). Returns the sub-paths and the
+ * original-path index at which each sub-path starts.
+ *
+ * This removes spurious long-haul segments (e.g. Railroad SAC → LIRR) that
+ * exist in the SPOT API encoded line data.
+ */
+export function splitPathAtJumps(
+  path: google.maps.LatLng[],
+  maxDistDeg = 0.005,
+): { paths: google.maps.LatLng[][]; startIndices: number[] } {
+  if (path.length === 0) return { paths: [], startIndices: [] };
+  const paths: google.maps.LatLng[][] = [];
+  const startIndices: number[] = [0];
+  let current: google.maps.LatLng[] = [path[0]];
+  for (let i = 1; i < path.length; i++) {
+    const dlat = path[i].lat() - path[i - 1].lat();
+    const dlng = path[i].lng() - path[i - 1].lng();
+    if (Math.sqrt(dlat * dlat + dlng * dlng) > maxDistDeg) {
+      paths.push(current);
+      current = [path[i]];
+      startIndices.push(i);
+    } else {
+      current.push(path[i]);
+    }
+  }
+  paths.push(current);
+  return { paths, startIndices };
+}
+
 /** Compute load percentage */
 export function loadPercent(load: number, capacity: number): number {
   if (capacity <= 0) return 0;
@@ -52,6 +103,17 @@ export function loadPercent(load: number, capacity: number): number {
 export function parseAmenities(amenities: string): string[] {
   if (!amenities) return [];
   return amenities.split(',').map((a) => a.trim()).filter(Boolean);
+}
+
+/** Haversine distance in meters between two lat/lng points */
+export function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6_371_000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 /** Center of Stony Brook University campus */

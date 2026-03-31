@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+a[href^="http://maps.google.com/maps"] {
+  display: none !important;
+}
+a[href^="https://maps.google.com/maps"] {
+  display: none !important;
+}
+
+.gmnoprint a,
+.gmnoprint span,
+.gm-style-cc {
+  display: none;
+}
+.gmnoprint div {
+  background: none !important;
+}
+
 /* ── Light mode defaults ────────────────────────────────────── */
 :root {
   --background: #f4f4f5;
@@ -46,4 +62,13 @@ body {
   .gm-style {
     background: #18181b !important;
   }
+}
+
+/* ── Vaul drawer overrides ──────────────────────────────────── */
+[vaul-drawer] {
+  z-index: 40;
+}
+/* No overlay — map stays interactive */
+[vaul-overlay] {
+  display: none !important;
 }

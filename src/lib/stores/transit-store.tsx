@@ -1,43 +1,141 @@
 'use client';
 
-import { createContext, useContext, useReducer, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
+
+// ── localStorage helpers ─────────────────────────────────────
+const SELECTED_ROUTES_KEY = 'wolfie-selected-routes';
+const PINNED_ROUTES_KEY = 'wolfie-pinned-routes';
+
+function loadSet(key: string): Set<number> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) return new Set(JSON.parse(raw) as number[]);
+  } catch {}
+  return new Set();
+}
+
+function saveSet(key: string, set: Set<number>): void {
+  try {
+    localStorage.setItem(key, JSON.stringify([...set]));
+  } catch {}
+}
 
 interface TransitState {
-  selectedRoutes: Set<number>;  // empty = all routes visible
+  selectedRoutes: Set<number>;
+  pinnedRoutes: Set<number>;
   selectedStop: number | null;
   selectedBus: string | null;
+  busSelectionKey: number; // increments on every SELECT_BUS, even for the same bus
   panelMode: 'stop' | 'bus' | null;
+  drawerView: 'home' | 'stop' | 'bus'; // mobile bottom sheet view
   mapTarget: { lat: number; lng: number; zoom?: number } | null;
+  previousBus: string | null;   // set when navigating: bus → stop
+  previousStop: number | null;  // set when navigating: stop → bus
 }
 
 type Action =
   | { type: 'TOGGLE_ROUTE'; routeId: number }
   | { type: 'SELECT_ALL_ROUTES' }
-  | { type: 'SELECT_STOP'; stopId: number }
+  | { type: 'TOGGLE_PINNED_ROUTE'; routeId: number }
+  | { type: 'SELECT_STOP'; stopId: number; fromBusId?: string }
   | { type: 'SELECT_BUS'; busId: string }
+  | { type: 'SELECT_BUS_FROM_STOP'; busId: string; fromStopId: number }
   | { type: 'CLEAR_SELECTION' }
   | { type: 'PAN_MAP'; lat: number; lng: number; zoom?: number }
-  | { type: 'CLEAR_MAP_TARGET' };
+  | { type: 'CLEAR_MAP_TARGET' }
+  | { type: 'BACK_TO_BUS' }
+  | { type: 'BACK_TO_STOP' }
+  | { type: 'SET_DRAWER_VIEW'; view: 'home' | 'stop' | 'bus' };
 
 function reducer(state: TransitState, action: Action): TransitState {
   switch (action.type) {
     case 'TOGGLE_ROUTE': {
       const next = new Set(state.selectedRoutes);
-      if (next.has(action.routeId)) {
-        next.delete(action.routeId);
-      } else {
-        next.add(action.routeId);
+      if (next.has(action.routeId)) next.delete(action.routeId);
+      else next.add(action.routeId);
+      if (state.panelMode !== null) {
+        return { ...state, selectedRoutes: next, selectedStop: null, selectedBus: null, panelMode: null, drawerView: 'home', previousBus: null, previousStop: null };
       }
       return { ...state, selectedRoutes: next };
     }
     case 'SELECT_ALL_ROUTES':
+      if (state.panelMode !== null) {
+        return { ...state, selectedRoutes: new Set(), selectedStop: null, selectedBus: null, panelMode: null, drawerView: 'home', previousBus: null, previousStop: null };
+      }
       return { ...state, selectedRoutes: new Set() };
+    case 'TOGGLE_PINNED_ROUTE': {
+      const next = new Set(state.pinnedRoutes);
+      if (next.has(action.routeId)) next.delete(action.routeId);
+      else next.add(action.routeId);
+      return { ...state, pinnedRoutes: next };
+    }
     case 'SELECT_STOP':
-      return { ...state, selectedStop: action.stopId, selectedBus: null, panelMode: 'stop' };
+      return {
+        ...state,
+        selectedStop: action.stopId,
+        selectedBus: null,
+        panelMode: 'stop',
+        drawerView: 'stop',
+        previousBus: action.fromBusId ?? null,
+        previousStop: null,
+      };
     case 'SELECT_BUS':
-      return { ...state, selectedBus: action.busId, selectedStop: null, panelMode: 'bus' };
+      return {
+        ...state,
+        selectedBus: action.busId,
+        busSelectionKey: state.busSelectionKey + 1,
+        selectedStop: null,
+        panelMode: 'bus',
+        drawerView: 'bus',
+        previousBus: null,
+        previousStop: null,
+      };
+    case 'SELECT_BUS_FROM_STOP':
+      return {
+        ...state,
+        selectedBus: action.busId,
+        busSelectionKey: state.busSelectionKey + 1,
+        selectedStop: null,
+        panelMode: 'bus',
+        drawerView: 'bus',
+        previousBus: null,
+        previousStop: action.fromStopId,
+      };
     case 'CLEAR_SELECTION':
-      return { ...state, selectedStop: null, selectedBus: null, panelMode: null };
+      return {
+        ...state,
+        selectedStop: null,
+        selectedBus: null,
+        panelMode: null,
+        drawerView: 'home',
+        previousBus: null,
+        previousStop: null,
+      };
+    case 'BACK_TO_BUS':
+      if (!state.previousBus) return state;
+      return {
+        ...state,
+        selectedBus: state.previousBus,
+        selectedStop: null,
+        panelMode: 'bus',
+        drawerView: 'bus',
+        previousBus: null,
+        previousStop: null,
+      };
+    case 'BACK_TO_STOP':
+      if (!state.previousStop) return state;
+      return {
+        ...state,
+        selectedStop: state.previousStop,
+        selectedBus: null,
+        panelMode: 'stop',
+        drawerView: 'stop',
+        previousStop: null,
+        previousBus: null,
+      };
+    case 'SET_DRAWER_VIEW':
+      return { ...state, drawerView: action.view };
     case 'PAN_MAP':
       return { ...state, mapTarget: { lat: action.lat, lng: action.lng, zoom: action.zoom } };
     case 'CLEAR_MAP_TARGET':
@@ -47,42 +145,69 @@ function reducer(state: TransitState, action: Action): TransitState {
   }
 }
 
-const initialState: TransitState = {
-  selectedRoutes: new Set(),
-  selectedStop: null,
-  selectedBus: null,
-  panelMode: null,
-  mapTarget: null,
-};
+function createInitialState(): TransitState {
+  return {
+    selectedRoutes: loadSet(SELECTED_ROUTES_KEY),
+    pinnedRoutes: loadSet(PINNED_ROUTES_KEY),
+    selectedStop: null,
+    selectedBus: null,
+    busSelectionKey: 0,
+    panelMode: null,
+    drawerView: 'home',
+    mapTarget: null,
+    previousBus: null,
+    previousStop: null,
+  };
+}
 
 interface TransitContextValue {
   state: TransitState;
   toggleRoute: (routeId: number) => void;
   selectAllRoutes: () => void;
-  selectStop: (stopId: number) => void;
+  togglePinnedRoute: (routeId: number) => void;
+  selectStop: (stopId: number, fromBusId?: string) => void;
   selectBus: (busId: string) => void;
+  selectBusFromStop: (busId: string, fromStopId: number) => void;
   clearSelection: () => void;
   isRouteVisible: (routeId: number) => boolean;
   panMap: (lat: number, lng: number, zoom?: number) => void;
   clearMapTarget: () => void;
+  backToBus: () => void;
+  backToStop: () => void;
+  setDrawerView: (view: 'home' | 'stop' | 'bus') => void;
 }
 
 const TransitContext = createContext<TransitContextValue | null>(null);
 
 export function TransitProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, undefined, createInitialState);
+
+  // Persist selected and pinned routes to localStorage
+  useEffect(() => {
+    saveSet(SELECTED_ROUTES_KEY, state.selectedRoutes);
+  }, [state.selectedRoutes]);
+
+  useEffect(() => {
+    saveSet(PINNED_ROUTES_KEY, state.pinnedRoutes);
+  }, [state.pinnedRoutes]);
 
   const value: TransitContextValue = {
     state,
     toggleRoute: (routeId) => dispatch({ type: 'TOGGLE_ROUTE', routeId }),
     selectAllRoutes: () => dispatch({ type: 'SELECT_ALL_ROUTES' }),
-    selectStop: (stopId) => dispatch({ type: 'SELECT_STOP', stopId }),
+    togglePinnedRoute: (routeId) => dispatch({ type: 'TOGGLE_PINNED_ROUTE', routeId }),
+    selectStop: (stopId, fromBusId) => dispatch({ type: 'SELECT_STOP', stopId, fromBusId }),
     selectBus: (busId) => dispatch({ type: 'SELECT_BUS', busId }),
+    selectBusFromStop: (busId, fromStopId) =>
+      dispatch({ type: 'SELECT_BUS_FROM_STOP', busId, fromStopId }),
     clearSelection: () => dispatch({ type: 'CLEAR_SELECTION' }),
     isRouteVisible: (routeId) =>
       state.selectedRoutes.size === 0 || state.selectedRoutes.has(routeId),
     panMap: (lat, lng, zoom) => dispatch({ type: 'PAN_MAP', lat, lng, zoom }),
     clearMapTarget: () => dispatch({ type: 'CLEAR_MAP_TARGET' }),
+    backToBus: () => dispatch({ type: 'BACK_TO_BUS' }),
+    backToStop: () => dispatch({ type: 'BACK_TO_STOP' }),
+    setDrawerView: (view) => dispatch({ type: 'SET_DRAWER_VIEW', view }),
   };
 
   return <TransitContext.Provider value={value}>{children}</TransitContext.Provider>;
