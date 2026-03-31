@@ -116,7 +116,7 @@ export function StopPanel({
       )}
 
       {/* Header */}
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
           <MapPin className="w-5 h-5 text-zinc-500 dark:text-zinc-300" />
         </div>
@@ -124,11 +124,6 @@ export function StopPanel({
           <h2 className="font-semibold text-base text-zinc-900 dark:text-zinc-100 leading-tight">
             {stop.name}
           </h2>
-          {stop.shortName && stop.shortName !== stop.name && (
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
-              {stop.shortName}
-            </p>
-          )}
         </div>
       </div>
 
@@ -192,11 +187,11 @@ export function StopPanel({
               return (
                 <button
                   key={`${eta.routeID}-${eta.equipmentID}-${i}`}
-                  onClick={() =>
-                    handleETAClick(eta.equipmentID, route?.name ?? `Route ${eta.routeID}`)
-                  }
+                    onClick={() =>
+                      handleETAClick(eta.equipmentID, route?.name ?? `Route ${eta.routeID}`)
+                    }
                   className="flex items-center gap-3 p-3 rounded-xl bg-zinc-100/80 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-zinc-700/40 text-left w-full transition-colors hover:bg-zinc-200/70 dark:hover:bg-zinc-700/50 group"
-                >
+                  >
                   <div
                     className="w-1 h-8 rounded-full shrink-0"
                     style={{ backgroundColor: color }}
@@ -234,7 +229,7 @@ export function StopPanel({
                       </p>
                     )}
                   </div>
-                </button>
+                  </button>
               );
             })}
           </div>
