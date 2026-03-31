@@ -105,6 +105,17 @@ export function parseAmenities(amenities: string): string[] {
   return amenities.split(',').map((a) => a.trim()).filter(Boolean);
 }
 
+/** Haversine distance in meters between two lat/lng points */
+export function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6_371_000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 /** Center of Stony Brook University campus */
 export const SBU_CENTER = { lat: 40.9122, lng: -73.1233 };
 export const SBU_DEFAULT_ZOOM = 15;

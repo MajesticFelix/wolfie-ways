@@ -9,7 +9,11 @@ import { useNearestStops } from "@/lib/hooks/use-nearest-stops";
 import { useMultiStopETAs } from "@/lib/hooks/use-multi-stop-etas";
 import { useTransit } from "@/lib/stores/transit-store";
 import { useDarkMode } from "@/lib/hooks/use-dark-mode";
-import { resolveRouteColor } from "@/lib/utils/maps";
+import {
+  resolveRouteColor,
+  deduplicateStops,
+  haversineM,
+} from "@/lib/utils/maps";
 import { cn } from "@/lib/utils";
 import type { Route, Stop, Vehicle } from "@/lib/api/types";
 
@@ -17,12 +21,14 @@ interface DrawerHomeViewProps {
   routes: Route[];
   stops: Stop[];
   vehicles: Vehicle[];
+  mapCenter?: { lat: number; lng: number };
 }
 
 export function DrawerHomeView({
   routes,
   stops,
   vehicles,
+  mapCenter,
 }: DrawerHomeViewProps) {
   const {
     state,
@@ -36,9 +42,28 @@ export function DrawerHomeView({
   const isDark = useDarkMode();
   const { geoState, nearest, requestLocation } = useNearestStops(stops, 5);
 
+  console.table(state);
+
+  // Stops within 200 m of the map crosshair center (updates after each pan settles)
+  const crosshairNearest = useMemo(() => {
+    if (!mapCenter) return [];
+    return deduplicateStops(stops)
+      .map((stop) => ({
+        stop,
+        distanceM: haversineM(mapCenter.lat, mapCenter.lng, stop.lat, stop.lng),
+      }))
+      .sort((a, b) => a.distanceM - b.distanceM)
+      .filter((n) => n.distanceM <= 200)
+      .slice(0, 5);
+  }, [stops, mapCenter]);
+
+  // Crosshair takes priority over geolocation once the map has fired its first idle
+  const crosshairActive = mapCenter !== undefined;
+  const activeNearest = crosshairActive ? crosshairNearest : nearest;
+
   const nearestStopIds = useMemo(
-    () => nearest.map((n) => n.stop.id),
-    [nearest],
+    () => activeNearest.map((n) => n.stop.id),
+    [activeNearest],
   );
   const stopMap = useMemo(() => new Map(stops.map((s) => [s.id, s])), [stops]);
   const routeMap = useMemo(
@@ -91,10 +116,20 @@ export function DrawerHomeView({
       .slice(0, 12);
   }, [departures, state.selectedRoutes, state.pinnedRoutes]);
 
-  const showDepartures = geoState === "granted";
-  const showGeoPrompt = geoState === "idle";
-  const showGeoLoading = geoState === "loading";
-  const showGeoDenied = geoState === "denied" || geoState === "unavailable";
+  // hasLocation: we have at least one position source (crosshair settled OR geo granted)
+  // hasNearbyStops: that position has stops within range to query
+  // Only after both are true do we show results or the "no buses" message.
+  const hasLocation = crosshairActive || geoState === "granted";
+  const hasNearbyStops = activeNearest.length > 0;
+  // Guard the loading skeleton: usePolling never clears isLoading when enabled=false
+  const showETAsLoading = hasNearbyStops && etasLoading;
+  // "No stops in this area" — we have a location but nothing within 200 m
+  const showNoStopsInArea = hasLocation && !hasNearbyStops;
+
+  const showGeoPrompt = !crosshairActive && geoState === "idle";
+  const showGeoLoading = !crosshairActive && geoState === "loading";
+  const showGeoDenied =
+    !crosshairActive && (geoState === "denied" || geoState === "unavailable");
 
   // Pinned routes sort first in pill row
   const sortedRoutes = useMemo(
@@ -112,16 +147,6 @@ export function DrawerHomeView({
       {/* ── Live count + route filter pills ── */}
       <div className="px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800/50">
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-          {/* Live count badge */}
-          {vehicles.length > 0 && (
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/20 shrink-0">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
-              <span className="text-xs font-semibold text-green-600 dark:text-green-400 tabular-nums whitespace-nowrap">
-                {vehicles.length} live
-              </span>
-            </div>
-          )}
-
           {/* All pill */}
           <button
             onClick={selectAllRoutes}
@@ -185,11 +210,11 @@ export function DrawerHomeView({
 
         {state.pinnedRoutes.size === 0 ? (
           <div className="flex items-center gap-3 p-4 rounded-xl bg-zinc-100/80 dark:bg-zinc-900/80 border border-zinc-200/60 dark:border-zinc-800/50">
-            <div 
+            <div
               className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
               style={{
                 backgroundColor: "rgba(245, 158, 11, 0.1)",
-                border: "1px solid rgba(245, 158, 11, 0.2)"
+                border: "1px solid rgba(245, 158, 11, 0.2)",
               }}
             >
               <Pin className="w-4 h-4" color="#f59e0b" />
@@ -205,7 +230,7 @@ export function DrawerHomeView({
           </div>
         ) : (
           <>
-            {!showDepartures && (
+            {showGeoPrompt && (
               <button
                 onClick={requestLocation}
                 className="flex items-center gap-3 p-4 rounded-xl bg-zinc-100/80 dark:bg-zinc-900/80 border border-zinc-200/60 dark:border-zinc-800/50 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/50 transition-colors text-left w-full"
@@ -223,7 +248,7 @@ export function DrawerHomeView({
                 </div>
               </button>
             )}
-            {showDepartures && etasLoading && (
+            {showETAsLoading && (
               <div className="flex flex-col gap-2">
                 {[1, 2].map((i) => (
                   <Skeleton
@@ -233,7 +258,8 @@ export function DrawerHomeView({
                 ))}
               </div>
             )}
-            {showDepartures &&
+            {hasLocation &&
+              hasNearbyStops &&
               !etasLoading &&
               pinnedDepartures.length === 0 && (
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-100/80 dark:bg-zinc-900/80 border border-zinc-200/60 dark:border-zinc-800/50">
@@ -243,7 +269,7 @@ export function DrawerHomeView({
                   </p>
                 </div>
               )}
-            {showDepartures && !etasLoading && pinnedDepartures.length > 0 && (
+            {hasNearbyStops && !etasLoading && pinnedDepartures.length > 0 && (
               <div className="flex flex-col gap-2">
                 {pinnedDepartures.map((departure, i) => {
                   const route = routeMap.get(departure.eta.routeID);
@@ -329,7 +355,7 @@ export function DrawerHomeView({
           </div>
         )}
 
-        {showDepartures && etasLoading && (
+        {showETAsLoading && (
           <div className="flex flex-col gap-2">
             {[1, 2, 3].map((i) => (
               <Skeleton
@@ -340,16 +366,28 @@ export function DrawerHomeView({
           </div>
         )}
 
-        {showDepartures && !etasLoading && filteredDepartures.length === 0 && (
+        {showNoStopsInArea && (
           <div className="flex items-center gap-3 p-4 rounded-xl bg-zinc-100/80 dark:bg-zinc-900/80 border border-zinc-200/60 dark:border-zinc-800/50">
-            <Clock className="w-4 h-4 text-zinc-400 shrink-0" />
+            <Navigation className="w-4 h-4 text-zinc-400 shrink-0" />
             <p className="text-sm text-zinc-400 dark:text-zinc-500">
-              No buses running nearby
+              No stops in this area
             </p>
           </div>
         )}
 
-        {showDepartures && !etasLoading && filteredDepartures.length > 0 && (
+        {hasLocation &&
+          hasNearbyStops &&
+          !etasLoading &&
+          filteredDepartures.length === 0 && (
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-zinc-100/80 dark:bg-zinc-900/80 border border-zinc-200/60 dark:border-zinc-800/50">
+              <Clock className="w-4 h-4 text-zinc-400 shrink-0" />
+              <p className="text-sm text-zinc-400 dark:text-zinc-500">
+                No buses running nearby
+              </p>
+            </div>
+          )}
+
+        {hasNearbyStops && !etasLoading && filteredDepartures.length > 0 && (
           <div className="flex flex-col gap-2">
             {filteredDepartures.map((departure, i) => {
               const route = routeMap.get(departure.eta.routeID);

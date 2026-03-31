@@ -38,6 +38,7 @@ function AppContent() {
   const { data: announcementGroups } = useAnnouncements();
   const isMobile = useIsMobile();
   const [showAnnouncements, setShowAnnouncements] = useState(false);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(undefined);
 
   const isInitialLoad = staticLoading && routes.length === 0;
   const hasAnnouncements = Boolean(announcementGroups && announcementGroups.length > 0);
@@ -47,7 +48,12 @@ function AppContent() {
       {/* Full-screen map */}
       <div className="absolute inset-0 z-0">
         {!isInitialLoad && (
-          <MapView routes={routes} stops={stops} vehicles={vehicles} />
+          <MapView
+            routes={routes}
+            stops={stops}
+            vehicles={vehicles}
+            onCenterChange={(lat, lng) => setMapCenter({ lat, lng })}
+          />
         )}
       </div>
 
@@ -174,12 +180,28 @@ function AppContent() {
             </div>
           )}
 
+          {/* Top-right: live bus count pill */}
+          {vehicles.length > 0 && (
+            <div
+              className="absolute top-0 right-0 z-20 p-3"
+              style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
+            >
+              <div className="flex items-center gap-1.5 px-2.5 py-2 rounded-2xl bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border border-zinc-200/70 dark:border-zinc-800/60 shadow-lg">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
+                <span className="text-xs font-semibold text-green-600 dark:text-green-400 tabular-nums whitespace-nowrap">
+                  {vehicles.length} live
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Transit bottom drawer */}
           <TransitDrawer
             routes={routes}
             stops={stops}
             vehicles={vehicles}
             stopImages={stopImages}
+            mapCenter={mapCenter}
           />
         </>
       )}

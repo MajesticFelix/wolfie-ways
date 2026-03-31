@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { AlertTriangle, Info, X } from 'lucide-react';
-import type { AnnouncementGroup } from '@/lib/api/types';
+import { useState, useEffect } from "react";
+import { AlertTriangle, Info, X } from "lucide-react";
+import type { AnnouncementGroup } from "@/lib/api/types";
 
 const CYCLE_MS = 5_000;
 const FADE_MS = 300;
@@ -17,7 +17,7 @@ export function AnnouncementBanner({ groups }: AnnouncementBannerProps) {
   const [visible, setVisible] = useState(true);
 
   const all = groups.flatMap((g) =>
-    g.announcements.map((a) => ({ ...a, severity: g.type }))
+    g.announcements.map((a) => ({ ...a, severity: g.type })),
   );
 
   // Reset on new data
@@ -48,7 +48,7 @@ export function AnnouncementBanner({ groups }: AnnouncementBannerProps) {
   if (all.length === 0 || dismissed) return null;
 
   const current = all[index];
-  const isHigh = current.severity === 'high';
+  const isHigh = current.severity === "high";
 
   return (
     <div
@@ -63,14 +63,14 @@ export function AnnouncementBanner({ groups }: AnnouncementBannerProps) {
         transitionDuration: `${FADE_MS}ms`,
         ...(isHigh
           ? {
-              background: 'rgba(69,10,10,0.92)',
-              borderColor: 'rgba(153,27,27,0.5)',
-              color: 'rgb(254,226,226)',
+              background: "rgba(69,10,10,0.92)",
+              borderColor: "rgba(153,27,27,0.5)",
+              color: "rgb(254,226,226)",
             }
           : {
-              background: 'rgba(55,32,10,0.92)',
-              borderColor: 'rgba(146,64,14,0.5)',
-              color: 'rgb(254,243,199)',
+              background: "rgba(55,32,10,0.92)",
+              borderColor: "rgba(146,64,14,0.5)",
+              color: "rgb(254,243,199)",
             }),
       }}
     >
@@ -97,7 +97,7 @@ export function AnnouncementBanner({ groups }: AnnouncementBannerProps) {
                 style={{
                   width: i === index ? 12 : 4,
                   height: 4,
-                  backgroundColor: 'currentColor',
+                  backgroundColor: "currentColor",
                   opacity: i === index ? 0.8 : 0.25,
                 }}
               />

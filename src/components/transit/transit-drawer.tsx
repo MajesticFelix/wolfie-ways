@@ -9,15 +9,20 @@ import { StopPanel } from "@/components/panels/stop-panel";
 import { BusPanel } from "@/components/panels/bus-panel";
 import type { Route, Stop, Vehicle, StopImage } from "@/lib/api/types";
 
-// Snap points: home has a peek height + half + near-full; detail views skip peek
-const SNAP_HOME: (string | number)[] = ["180px", 0.5, 0.92];
-const SNAP_DETAIL: (string | number)[] = [0.4, 0.92];
+// Dense snap points from the peek height up to full-screen in 2% steps.
+// This gives ~8 px max jump on release at 844 px viewport height — feels free.
+const FREE_SNAP_POINTS: (string | number)[] = [
+  "180px",
+  ...Array.from({ length: 40 }, (_, i) => (22 + i * 2) / 100),
+  // 0.22, 0.24, 0.26, … 0.98, 1.00
+];
 
 interface TransitDrawerProps {
   routes: Route[];
   stops: Stop[];
   vehicles: Vehicle[];
   stopImages: Map<number, StopImage>;
+  mapCenter?: { lat: number; lng: number };
 }
 
 export function TransitDrawer({
@@ -25,14 +30,15 @@ export function TransitDrawer({
   stops,
   vehicles,
   stopImages,
+  mapCenter,
 }: TransitDrawerProps) {
   const { state, clearSelection } = useTransit();
-  const [activeSnapPoint, setActiveSnapPoint] = useState<string | number>("180px");
+  const [activeSnapPoint, setActiveSnapPoint] = useState<string | number>(
+    "180px",
+  );
 
-  // Snap points derived from drawer view — no local state needed
-  const snapPoints = state.drawerView === "home" ? SNAP_HOME : SNAP_DETAIL;
-
-  // Animate to the default snap point whenever the view changes
+  // Animate to the default position whenever the view changes.
+  // Both "180px" and 0.4 are present in FREE_SNAP_POINTS.
   useEffect(() => {
     setActiveSnapPoint(state.drawerView === "home" ? "180px" : 0.4);
   }, [state.drawerView]);
@@ -43,7 +49,10 @@ export function TransitDrawer({
     () => new Map(vehicles.map((v) => [v.equipmentID, v])),
     [vehicles],
   );
-  const routeMap = useMemo(() => new Map(routes.map((r) => [r.id, r])), [routes]);
+  const routeMap = useMemo(
+    () => new Map(routes.map((r) => [r.id, r])),
+    [routes],
+  );
 
   const selectedStop =
     state.selectedStop !== null ? stopMap.get(state.selectedStop) : undefined;
@@ -73,11 +82,14 @@ export function TransitDrawer({
       dismissible={false}
       shouldScaleBackground={false}
       noBodyStyles
-      snapPoints={snapPoints}
+      snapPoints={FREE_SNAP_POINTS}
       activeSnapPoint={activeSnapPoint}
-      setActiveSnapPoint={(sp) => { if (sp !== null) setActiveSnapPoint(sp); }}
+      setActiveSnapPoint={(sp) => {
+        if (sp !== null) setActiveSnapPoint(sp);
+      }}
     >
       <DrawerPrimitive.Portal>
+        <DrawerPrimitive.Title></DrawerPrimitive.Title>
         <DrawerPrimitive.Content
           className="fixed inset-x-0 bottom-0 z-40 flex h-full flex-col bg-white dark:bg-zinc-950 rounded-t-[20px] border-t border-zinc-200/70 dark:border-zinc-800/60 shadow-2xl focus:outline-none"
           aria-label="Transit panel"
@@ -98,7 +110,8 @@ export function TransitDrawer({
                   </p>
                   {state.drawerView === "bus" && selectedVehicle && (
                     <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate mt-0.5">
-                      {selectedVehicleRoute?.name ?? `Bus ${selectedVehicle.equipmentID}`}
+                      {selectedVehicleRoute?.name ??
+                        `Bus ${selectedVehicle.equipmentID}`}
                     </p>
                   )}
                 </div>
@@ -123,6 +136,7 @@ export function TransitDrawer({
                 routes={routes}
                 stops={stops}
                 vehicles={vehicles}
+                mapCenter={mapCenter}
               />
             )}
 

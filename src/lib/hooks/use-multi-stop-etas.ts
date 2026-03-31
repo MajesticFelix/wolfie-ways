@@ -39,5 +39,5 @@ export function useMultiStopETAs(stopIds: number[]) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  return usePolling<StopDeparture[]>(fetchFn, 10_000, stopIds.length > 0);
+  return usePolling<StopDeparture[]>(fetchFn, 10_000, stopIds.length > 0, key);
 }

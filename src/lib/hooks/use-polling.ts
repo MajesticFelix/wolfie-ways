@@ -11,7 +11,8 @@ interface PollingState<T> {
 export function usePolling<T>(
   fetchFn: () => Promise<T>,
   intervalMs: number,
-  enabled = true
+  enabled = true,
+  key?: string | number,
 ): PollingState<T> & { refresh: () => void } {
   const [state, setState] = useState<PollingState<T>>({
     data: null,
@@ -52,7 +53,7 @@ export function usePolling<T>(
       clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [enabled, intervalMs, run]);
+  }, [enabled, intervalMs, run, key]);
 
   return { ...state, refresh: run };
 }
