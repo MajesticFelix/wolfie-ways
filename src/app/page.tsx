@@ -12,7 +12,15 @@ import { NearestStopsPanel } from "@/components/controls/nearest-stops-panel";
 import { AnnouncementBanner } from "@/components/announcements/announcement-banner";
 import { BottomSheet } from "@/components/panels/bottom-sheet";
 import { TransitDrawer } from "@/components/transit/transit-drawer";
-import { Bus, RefreshCw, AlertCircle, AlertTriangle, Info, X } from "lucide-react";
+import {
+  Bus,
+  RefreshCw,
+  AlertCircle,
+  AlertTriangle,
+  Info,
+  X,
+} from "lucide-react";
+import { InstallPrompt } from "@/components/transit/install-prompt";
 
 export default function Home() {
   return (
@@ -38,10 +46,14 @@ function AppContent() {
   const { data: announcementGroups } = useAnnouncements();
   const isMobile = useIsMobile();
   const [showAnnouncements, setShowAnnouncements] = useState(false);
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(undefined);
+  const [mapCenter, setMapCenter] = useState<
+    { lat: number; lng: number } | undefined
+  >(undefined);
 
   const isInitialLoad = staticLoading && routes.length === 0;
-  const hasAnnouncements = Boolean(announcementGroups && announcementGroups.length > 0);
+  const hasAnnouncements = Boolean(
+    announcementGroups && announcementGroups.length > 0,
+  );
 
   return (
     <div className="relative w-full h-dvh overflow-hidden">
@@ -85,39 +97,54 @@ function AppContent() {
           ═══════════════════════════════════════════ */}
       {!isInitialLoad && isMobile && (
         <>
-          {/* Floating top-left: Wolfie Ways pill + refresh button */}
+          {/* Floating top-left header stack: Pill + Refresh + Install Prompt */}
           <div
-            className="absolute top-0 left-0 z-20 flex items-center gap-2 p-3"
+            className="absolute top-0 left-0 z-20 flex flex-col items-start gap-2 pl-3 pb-3 w-full pointer-events-none"
             style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
           >
-            {/* Wolfie Ways pill — with optional announcement indicator */}
-            <div className="flex items-center gap-1.5 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border border-zinc-200/70 dark:border-zinc-800/60 rounded-2xl px-2.5 py-2 shadow-lg">
-              <div className="w-5 h-5 rounded-md bg-red-600 flex items-center justify-center shrink-0">
-                <Bus className="w-3 h-3 text-white" />
+            <div className="flex items-center gap-2 pointer-events-auto">
+              {/* Wolfie Ways pill — with optional announcement indicator */}
+              <div className="flex items-center gap-1.5 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border border-zinc-200/70 dark:border-zinc-800/60 rounded-2xl px-2.5 py-2 shadow-lg">
+                <div className="w-5 h-5 rounded-md bg-red-600 flex items-center justify-center shrink-0">
+                  <Bus className="w-3 h-3 text-white" />
+                </div>
+                <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                  Wolfie Ways
+                </span>
+                {hasAnnouncements && (
+                  <button
+                    onClick={() => setShowAnnouncements((v) => !v)}
+                    className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 transition-colors ${showAnnouncements ? "bg-red-700" : "bg-red-600 hover:bg-red-700"}`}
+                    aria-label={
+                      showAnnouncements
+                        ? "Hide announcements"
+                        : "Show announcements"
+                    }
+                  >
+                    <span className="text-white text-[9px] font-black leading-none select-none">
+                      !
+                    </span>
+                  </button>
+                )}
               </div>
-              <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                Wolfie Ways
-              </span>
-              {hasAnnouncements && (
-                <button
-                  onClick={() => setShowAnnouncements((v) => !v)}
-                  className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 transition-colors ${showAnnouncements ? "bg-red-700" : "bg-red-600 hover:bg-red-700"}`}
-                  aria-label={showAnnouncements ? "Hide announcements" : "Show announcements"}
-                >
-                  <span className="text-white text-[9px] font-black leading-none select-none">!</span>
-                </button>
-              )}
+
+              {/* Refresh button */}
+              <button
+                onClick={refreshVehicles}
+                disabled={vehiclesLoading}
+                className="w-9 h-9 flex items-center justify-center rounded-2xl bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border border-zinc-200/70 dark:border-zinc-800/60 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors shadow-lg disabled:opacity-50"
+                aria-label="Refresh bus positions"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${vehiclesLoading ? "animate-spin" : ""}`}
+                />
+              </button>
             </div>
 
-            {/* Refresh button */}
-            <button
-              onClick={refreshVehicles}
-              disabled={vehiclesLoading}
-              className="w-9 h-9 flex items-center justify-center rounded-2xl bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border border-zinc-200/70 dark:border-zinc-800/60 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors shadow-lg disabled:opacity-50"
-              aria-label="Refresh bus positions"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${vehiclesLoading ? "animate-spin" : ""}`} />
-            </button>
+            {/* Install prompt */}
+            <div className="w-full pr-3 pointer-events-auto">
+              <InstallPrompt />
+            </div>
           </div>
 
           {/* Announcement modal — centered overlay with blur backdrop */}
@@ -139,9 +166,13 @@ function AppContent() {
                   <div className="flex items-center justify-between px-4 py-3.5 border-b border-zinc-800/60">
                     <div className="flex items-center gap-2">
                       <div className="w-5 h-5 rounded-full bg-red-600 flex items-center justify-center shrink-0">
-                        <span className="text-white text-[9px] font-black leading-none select-none">!</span>
+                        <span className="text-white text-[9px] font-black leading-none select-none">
+                          !
+                        </span>
                       </div>
-                      <p className="text-sm font-bold text-zinc-100">Announcements</p>
+                      <p className="text-sm font-bold text-zinc-100">
+                        Announcements
+                      </p>
                     </div>
                     <button
                       onClick={() => setShowAnnouncements(false)}
@@ -155,7 +186,12 @@ function AppContent() {
                   {/* Announcement list */}
                   <div className="p-4 flex flex-col gap-3">
                     {announcementGroups
-                      .flatMap((g) => g.announcements.map((a) => ({ ...a, severity: g.type })))
+                      .flatMap((g) =>
+                        g.announcements.map((a) => ({
+                          ...a,
+                          severity: g.type,
+                        })),
+                      )
                       .map((a, i) => (
                         <div
                           key={i}
@@ -175,7 +211,9 @@ function AppContent() {
                       ))}
                   </div>
                 </div>
-                <p className="text-center text-xs text-white/40 mt-5">Tap outside to close</p>
+                <p className="text-center text-xs text-white/40 mt-5">
+                  Tap outside to close
+                </p>
               </div>
             </div>
           )}

@@ -44,10 +44,35 @@ export function DrawerHomeView({
 
   console.table(state);
 
-  // Stops within 200 m of the map crosshair center (updates after each pan settles)
+  // Stops within 200 m of the map crosshair center (updates after each pan settles).
+  // Only considers stops visible under the current route filters so results
+  // stay consistent with what the crosshair can snap to on the map.
   const crosshairNearest = useMemo(() => {
     if (!mapCenter) return [];
+
+    // Build set of stop IDs visible under current filters (mirrors StopMarkers logic).
+    const visibleStopIds = new Set<number>();
+    for (const route of routes) {
+      let visible: boolean;
+      if (state.selectedBus) {
+        const bus = vehicles.find((v) => v.equipmentID === state.selectedBus);
+        visible = bus ? route.id === bus.routeID : false;
+      } else if (state.selectedStop != null) {
+        const servesStop = route.stops.includes(state.selectedStop);
+        visible =
+          servesStop &&
+          (state.selectedRoutes.size === 0 || state.selectedRoutes.has(route.id));
+      } else {
+        visible =
+          state.selectedRoutes.size === 0 || state.selectedRoutes.has(route.id);
+      }
+      if (visible) {
+        for (const stopId of route.stops) visibleStopIds.add(stopId);
+      }
+    }
+
     return deduplicateStops(stops)
+      .filter((s) => visibleStopIds.has(s.id))
       .map((stop) => ({
         stop,
         distanceM: haversineM(mapCenter.lat, mapCenter.lng, stop.lat, stop.lng),
@@ -55,7 +80,7 @@ export function DrawerHomeView({
       .sort((a, b) => a.distanceM - b.distanceM)
       .filter((n) => n.distanceM <= 200)
       .slice(0, 5);
-  }, [stops, mapCenter]);
+  }, [stops, routes, vehicles, mapCenter, state.selectedRoutes, state.selectedBus, state.selectedStop]);
 
   // Crosshair takes priority over geolocation once the map has fired its first idle
   const crosshairActive = mapCenter !== undefined;

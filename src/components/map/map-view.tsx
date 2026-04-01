@@ -34,6 +34,7 @@ export function MapView({
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID;
   const isMobile = useIsMobile();
   const isDark = useDarkMode();
+  const { state, selectStop, panMap } = useTransit();
   // Pixel offset from map-center to the nearest snapped stop (0,0 = unsnapped)
   const [snapOffset, setSnapOffset] = useState<{ x: number; y: number }>({
     x: 0,
@@ -41,7 +42,16 @@ export function MapView({
   });
   // True while the map is actively panning (between dragstart and idle+300ms)
   const [isPanning, setIsPanning] = useState(false);
+  // The stop the crosshair is currently locked onto (null = not locked)
+  const [lockedStop, setLockedStop] = useState<{
+    id: number;
+    name: string;
+    lat: number;
+    lng: number;
+  } | null>(null);
   const snapped = snapOffset.x !== 0 || snapOffset.y !== 0;
+  // Crosshair is hidden while tracking a live bus
+  const showCrosshair = isMobile && !state.selectedBus;
 
   return (
     <APIProvider apiKey={apiKey}>
@@ -63,37 +73,80 @@ export function MapView({
           <ZoomControls />
           <MapPanner />
           <BusTracker vehicles={vehicles} />
-          {isMobile && onCenterChange && (
+          {showCrosshair && onCenterChange && (
             <MapCrosshairTracker
               stops={stops}
+              routes={routes}
+              vehicles={vehicles}
               onCenterChange={onCenterChange}
               onSnapOffset={(dx, dy) => setSnapOffset({ x: dx, y: dy })}
               onPanningChange={setIsPanning}
+              onLockedStopChange={setLockedStop}
             />
           )}
         </Map>
 
-        {/* Fixed crosshair — same size/shape as a stop pin but purple.
-            CSS-translates to snap onto nearby stops; pointer-events none so
-            all touch/mouse events fall through to the map. */}
-        {isMobile && (
+        {/* Fixed crosshair — hidden while tracking a live bus.
+            A shared translate wrapper applies the snap offset once;
+            the stop name label and dot are children of that wrapper. */}
+        {showCrosshair && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
             <div
               style={{
-                width: 20,
-                height: 20,
-                borderRadius: "50%",
-                background: isDark ? "#18181b" : "#ffffff",
-                border: "3.5px solid #8b5cf6",
-                opacity: isPanning ? 0.75 : 1,
-                boxShadow: snapped
-                  ? "0 0 0 3px rgba(139,92,246,0.35), 0 2px 8px rgba(0,0,0,0.4)"
-                  : "0 0 0 3px rgba(139,92,246,0.15), 0 1px 5px rgba(0,0,0,0.3)",
-                transform: `translate(${snapOffset.x}px, ${snapOffset.y}px) scale(${snapped ? 1.4 : 1})`,
-                transition:
-                  "transform 200ms ease-out, box-shadow 200ms ease-out, opacity 150ms ease",
+                position: "relative",
+                transform: `translate(${snapOffset.x}px, ${snapOffset.y}px)`,
+                transition: "transform 200ms ease-out",
               }}
-            />
+            >
+              {/* Stop name label — appears above the dot when locked onto a stop */}
+              {lockedStop && (
+                <button
+                  onClick={() => {
+                    selectStop(lockedStop.id);
+                    panMap(lockedStop.lat, lockedStop.lng, 18);
+                  }}
+                  className="pointer-events-auto absolute whitespace-nowrap"
+                  style={{
+                    bottom: "calc(100% + 8px)",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    padding: "3px 10px",
+                    borderRadius: 999,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    background: isDark
+                      ? "rgba(24,24,27,0.92)"
+                      : "rgba(0,0,0,0.78)",
+                    color: "#fff",
+                    border: "1px solid rgba(139,92,246,0.4)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+                    backdropFilter: "blur(6px)",
+                    opacity: isPanning ? 0 : 1,
+                    transition: "opacity 150ms ease",
+                  }}
+                >
+                  {lockedStop.name}
+                </button>
+              )}
+
+              {/* Crosshair dot — same size/shape as a stop pin but purple */}
+              <div
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  background: isDark ? "#18181b" : "#ffffff",
+                  border: "3.5px solid #8b5cf6",
+                  opacity: isPanning ? 0.75 : 1,
+                  boxShadow: snapped
+                    ? "0 0 0 3px rgba(139,92,246,0.35), 0 2px 8px rgba(0,0,0,0.4)"
+                    : "0 0 0 3px rgba(139,92,246,0.15), 0 1px 5px rgba(0,0,0,0.3)",
+                  transform: `scale(${snapped ? 1.4 : 1})`,
+                  transition:
+                    "transform 200ms ease-out, box-shadow 200ms ease-out, opacity 150ms ease",
+                }}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -107,9 +160,10 @@ export function MapView({
  * - dragstart  → immediately reset snap offset so the dot snaps back to
  *               center the moment the user lifts and starts panning again.
  * - idle+300ms → read map center, report it via onCenterChange, then find
- *               the nearest stop. If it is within SNAP_M metres, compute
- *               the pixel offset from map-center to that stop using the
- *               map projection and report it via onSnapOffset.
+ *               the nearest *visible* stop (respecting route filters). If it
+ *               is within SNAP_M metres, compute the pixel offset from
+ *               map-center to that stop using the map projection and report
+ *               it via onSnapOffset.
  */
 // AdvancedMarker's default anchor is center-bottom of the content element.
 // For a 20 px stop pin the visual circle center is 10 px above the anchor.
@@ -118,28 +172,50 @@ const STOP_PIN_HALF_H = 10;
 
 function MapCrosshairTracker({
   stops,
+  routes,
+  vehicles,
   onCenterChange,
   onSnapOffset,
   onPanningChange,
+  onLockedStopChange,
 }: {
   stops: Stop[];
+  routes: Route[];
+  vehicles: Vehicle[];
   onCenterChange: (lat: number, lng: number) => void;
   onSnapOffset: (dx: number, dy: number) => void;
   onPanningChange: (isPanning: boolean) => void;
+  onLockedStopChange: (
+    stop: { id: number; name: string; lat: number; lng: number } | null,
+  ) => void;
 }) {
   const map = useMap();
+  const { state } = useTransit();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Stable refs — the effect only depends on `map`, never on callback identity.
   const centerRef = useRef(onCenterChange);
   const snapRef = useRef(onSnapOffset);
   const panRef = useRef(onPanningChange);
+  const lockedChangeRef = useRef(onLockedStopChange);
   centerRef.current = onCenterChange;
   snapRef.current = onSnapOffset;
   panRef.current = onPanningChange;
+  lockedChangeRef.current = onLockedStopChange;
   const stopsRef = useRef(stops);
   stopsRef.current = stops;
+  const routesRef = useRef(routes);
+  routesRef.current = routes;
+  const vehiclesRef = useRef(vehicles);
+  vehiclesRef.current = vehicles;
+  const stateRef = useRef(state);
+  stateRef.current = state;
   // The stop we're currently locked to (null = not locked).
-  const lockedStopRef = useRef<{ lat: number; lng: number } | null>(null);
+  const lockedStopRef = useRef<{
+    id: number;
+    name: string;
+    lat: number;
+    lng: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!map) return;
@@ -169,6 +245,7 @@ function MapCrosshairTracker({
       lockedStopRef.current = null;
       snapRef.current(0, 0);
       panRef.current(true);
+      lockedChangeRef.current(null);
     });
 
     // Zoom → if locked, smoothly re-center on the locked stop.
@@ -204,7 +281,39 @@ function MapCrosshairTracker({
           return;
         }
 
-        // Not locked — search for a nearby stop to snap to.
+        // Not locked — search for a nearby *visible* stop to snap to.
+        // Build the set of stop IDs that are visible under current route
+        // filters (mirrors the isEffectivelyVisible logic in StopMarkers).
+        const currentState = stateRef.current;
+        const currentRoutes = routesRef.current;
+        const currentVehicles = vehiclesRef.current;
+
+        const visibleStopIds = new Set<number>();
+        for (const route of currentRoutes) {
+          let visible: boolean;
+          if (currentState.selectedBus) {
+            const bus = currentVehicles.find(
+              (v) => v.equipmentID === currentState.selectedBus,
+            );
+            visible = bus ? route.id === bus.routeID : false;
+          } else if (currentState.selectedStop != null) {
+            const servesStop = route.stops.includes(currentState.selectedStop);
+            visible =
+              servesStop &&
+              (currentState.selectedRoutes.size === 0 ||
+                currentState.selectedRoutes.has(route.id));
+          } else {
+            visible =
+              currentState.selectedRoutes.size === 0 ||
+              currentState.selectedRoutes.has(route.id);
+          }
+          if (visible) {
+            for (const stopId of route.stops) {
+              visibleStopIds.add(stopId);
+            }
+          }
+        }
+
         // Convert a fixed screen-pixel radius into metres using the
         // map projection so the snap feel stays consistent at every zoom.
         const SNAP_PX = 25; // screen pixels
@@ -230,7 +339,11 @@ function MapCrosshairTracker({
             }
           }
         }
-        const uniqueStops = deduplicateStops(stopsRef.current);
+
+        // Only consider stops that are currently visible on the map.
+        const uniqueStops = deduplicateStops(stopsRef.current).filter((s) =>
+          visibleStopIds.has(s.id),
+        );
         let nearest: Stop | null = null;
         let nearestDist = Infinity;
         for (const stop of uniqueStops) {
@@ -242,10 +355,18 @@ function MapCrosshairTracker({
         }
 
         if (nearest && nearestDist <= SNAP_M) {
-          lockedStopRef.current = { lat: nearest.lat, lng: nearest.lng };
+          const locked = {
+            id: nearest.id,
+            name: nearest.name || nearest.shortName,
+            lat: nearest.lat,
+            lng: nearest.lng,
+          };
+          lockedStopRef.current = locked;
+          lockedChangeRef.current(locked);
           computeOffset(nearest.lat, nearest.lng);
         } else {
           snapRef.current(0, 0);
+          lockedChangeRef.current(null);
         }
       }, 300);
     });
