@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { TransitProvider } from "@/lib/stores/transit-store";
 import { useTransitData } from "@/lib/hooks/use-transit-data";
 import { useVehicles } from "@/lib/hooks/use-vehicles";
@@ -71,15 +72,20 @@ function AppContent() {
 
       {/* Loading overlay */}
       {isInitialLoad && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-zinc-100 dark:bg-zinc-950 gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-red-600 flex items-center justify-center">
-            <Bus className="w-9 h-9 text-white" />
-          </div>
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-zinc-100 dark:bg-zinc-950 gap-8">
+          <Image
+            src="/wolfieways.png"
+            alt="Wolfie Ways"
+            width={128}
+            height={128}
+            className="w-32 h-32 rounded-3xl drop-shadow-2xl"
+            priority
+          />
           <div className="text-center">
-            <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+            <p className="text-4xl font-bold text-zinc-900 dark:text-zinc-100">
               Wolfie Ways
             </p>
-            <p className="text-sm text-zinc-500 mt-1">Loading bus data…</p>
+            <p className="text-xl text-zinc-500 mt-2">Loading bus data…</p>
           </div>
         </div>
       )}
@@ -105,9 +111,13 @@ function AppContent() {
             <div className="flex items-center gap-2 pointer-events-auto">
               {/* Wolfie Ways pill — with optional announcement indicator */}
               <div className="flex items-center gap-1.5 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border border-zinc-200/70 dark:border-zinc-800/60 rounded-2xl px-2.5 py-2 shadow-lg">
-                <div className="w-5 h-5 rounded-md bg-red-600 flex items-center justify-center shrink-0">
-                  <Bus className="w-3 h-3 text-white" />
-                </div>
+                <Image
+                  src="/wolfieways.png"
+                  alt="Wolfie Ways"
+                  width={20}
+                  height={20}
+                  className="w-5 h-5 rounded-md shrink-0"
+                />
                 <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                   Wolfie Ways
                 </span>
@@ -258,9 +268,13 @@ function AppContent() {
             <div className="flex items-center gap-2">
               {/* Logo pill */}
               <div className="flex items-center gap-2 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border border-zinc-200/70 dark:border-zinc-800/60 rounded-2xl px-3 py-2 shadow-lg">
-                <div className="w-6 h-6 rounded-lg bg-red-600 flex items-center justify-center shrink-0">
-                  <Bus className="w-3.5 h-3.5 text-white" />
-                </div>
+                <Image
+                  src="/wolfieways.png"
+                  alt="Wolfie Ways"
+                  width={24}
+                  height={24}
+                  className="w-6 h-6 rounded-lg shrink-0"
+                />
                 <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                   Wolfie Ways
                 </span>
