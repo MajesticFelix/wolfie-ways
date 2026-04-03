@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, MapPin, Clock, ArrowLeft, Pin } from "lucide-react";
+import { Users, MapPin, Clock, ArrowLeft } from "lucide-react";
 import {
   resolveRouteColor,
   formatEtaSeconds,
@@ -21,7 +21,7 @@ interface BusPanelProps {
 }
 
 export function BusPanel({ vehicle, route, nextStop, stops, previousStop }: BusPanelProps) {
-  const { selectStop, panMap, backToStop, state, togglePinnedRoute } = useTransit();
+  const { selectStop, panMap, backToStop } = useTransit();
   const isDark = useDarkMode();
   const color = resolveRouteColor(route?.color ?? "#3B82F6", isDark);
   const loadPct = loadPercent(vehicle.load, vehicle.capacity);
@@ -67,26 +67,6 @@ export function BusPanel({ vehicle, route, nextStop, stops, previousStop }: BusP
           )}
         </div>
       </div>
-        {route && (
-          <button
-            onClick={() => togglePinnedRoute(route.id)}
-            className={`flex items-center justify-center shrink-0 w-11 h-11 rounded-full transition-colors ${
-              state.pinnedRoutes.has(route.id)
-                ? "bg-amber-100/50 dark:bg-amber-900/30 text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-900/40"
-                : "bg-zinc-100/80 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 dark:text-zinc-500"
-            }`}
-            aria-label={
-              state.pinnedRoutes.has(route.id)
-                ? `Unpin ${route.name}`
-                : `Pin ${route.name}`
-            }
-          >
-            <Pin
-              className="w-5 h-5"
-              fill={state.pinnedRoutes.has(route.id) ? "currentColor" : "none"}
-            />
-          </button>
-        )}
       </div>
 
       {/* Back to stop button */}

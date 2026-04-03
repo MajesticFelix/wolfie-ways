@@ -34,15 +34,11 @@ export function DrawerHomeView({
     state,
     toggleRoute,
     selectAllRoutes,
-    selectStop,
-    selectBusFromStop,
+    selectStopWithRouteFilter,
     panMap,
-    togglePinnedRoute,
   } = useTransit();
   const isDark = useDarkMode();
   const { geoState, nearest, requestLocation } = useNearestStops(stops, 5);
-
-  console.table(state);
 
   // Stops within 200 m of the map crosshair center (updates after each pan settles).
   // Only considers stops visible under the current route filters so results
@@ -90,6 +86,12 @@ export function DrawerHomeView({
     () => activeNearest.map((n) => n.stop.id),
     [activeNearest],
   );
+
+  // Maps stopId → distance rank (0 = closest) for sorting departures by proximity
+  const nearestRankMap = useMemo(
+    () => new Map(activeNearest.map((n, i) => [n.stop.id, i])),
+    [activeNearest],
+  );
   const stopMap = useMemo(() => new Map(stops.map((s) => [s.id, s])), [stops]);
   const routeMap = useMemo(
     () => new Map(routes.map((r) => [r.id, r])),
@@ -120,7 +122,8 @@ export function DrawerHomeView({
       .slice(0, 6);
   }, [departures, state.pinnedRoutes]);
 
-  // Nearby departures: non-pinned routes, respects route filter
+  // Nearby departures: non-pinned routes, respects route filter.
+  // Sorted by stop proximity first (nearest stop first), then by ETA within each stop.
   const filteredDepartures = useMemo(() => {
     if (!departures) return [];
     let filtered = departures;
@@ -138,8 +141,14 @@ export function DrawerHomeView({
         seen.add(key);
         return true;
       })
+      .sort((a, b) => {
+        const rankA = nearestRankMap.get(a.stopId) ?? Infinity;
+        const rankB = nearestRankMap.get(b.stopId) ?? Infinity;
+        if (rankA !== rankB) return rankA - rankB;
+        return a.eta.minutes - b.eta.minutes;
+      })
       .slice(0, 12);
-  }, [departures, state.selectedRoutes, state.pinnedRoutes]);
+  }, [departures, state.selectedRoutes, state.pinnedRoutes, nearestRankMap]);
 
   // hasLocation: we have at least one position source (crosshair settled OR geo granted)
   // hasNearbyStops: that position has stops within range to query
@@ -312,19 +321,8 @@ export function DrawerHomeView({
                       isLive={isLive}
                       isDark={isDark}
                       onClick={() => {
-                        if (isLive) {
-                          const vehicle = vehicleMap.get(
-                            departure.eta.equipmentID,
-                          );
-                          selectBusFromStop(
-                            departure.eta.equipmentID,
-                            departure.stopId,
-                          );
-                          if (vehicle) panMap(vehicle.lat, vehicle.lng, 18);
-                        } else {
-                          selectStop(departure.stopId);
-                          panMap(stop.lat, stop.lng, 18);
-                        }
+                        selectStopWithRouteFilter(departure.stopId, departure.eta.routeID);
+                        panMap(stop.lat, stop.lng, 18);
                       }}
                     />
                   );
@@ -430,18 +428,9 @@ export function DrawerHomeView({
                   isLive={isLive}
                   isDark={isDark}
                   onClick={() => {
-                    if (isLive) {
-                      const vehicle = vehicleMap.get(departure.eta.equipmentID);
-                      selectBusFromStop(
-                        departure.eta.equipmentID,
-                        departure.stopId,
-                      );
-                      if (vehicle) panMap(vehicle.lat, vehicle.lng, 18);
-                    } else {
-                      selectStop(departure.stopId);
-                      panMap(stop.lat, stop.lng, 18);
-                    }
-                  }}
+                  selectStopWithRouteFilter(departure.stopId, departure.eta.routeID);
+                  panMap(stop.lat, stop.lng, 18);
+                }}
                 />
               );
             })}

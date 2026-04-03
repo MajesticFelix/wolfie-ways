@@ -24,6 +24,7 @@ function saveSet(key: string, set: Set<number>): void {
 interface TransitState {
   selectedRoutes: Set<number>;
   pinnedRoutes: Set<number>;
+  previousSelectedRoutes: Set<number> | null; // saved by SELECT_STOP_WITH_ROUTE_FILTER, restored on CLEAR_SELECTION
   selectedStop: number | null;
   selectedBus: string | null;
   busSelectionKey: number; // increments on every SELECT_BUS, even for the same bus
@@ -40,6 +41,7 @@ type Action =
   | { type: 'SELECT_ALL_ROUTES' }
   | { type: 'TOGGLE_PINNED_ROUTE'; routeId: number }
   | { type: 'SELECT_STOP'; stopId: number; fromBusId?: string }
+  | { type: 'SELECT_STOP_WITH_ROUTE_FILTER'; stopId: number; routeId: number }
   | { type: 'SELECT_BUS'; busId: string }
   | { type: 'SELECT_BUS_FROM_STOP'; busId: string; fromStopId: number }
   | { type: 'CLEAR_SELECTION' }
@@ -58,13 +60,14 @@ function reducer(state: TransitState, action: Action): TransitState {
       if (next.has(action.routeId)) next.delete(action.routeId);
       else next.add(action.routeId);
       if (state.panelMode !== null) {
-        return { ...state, selectedRoutes: next, selectedStop: null, selectedBus: null, panelMode: null, drawerView: 'home', previousBus: null, previousStop: null };
+        // User explicitly changed filters while in a panel — discard any saved routes
+        return { ...state, selectedRoutes: next, previousSelectedRoutes: null, selectedStop: null, selectedBus: null, panelMode: null, drawerView: 'home', previousBus: null, previousStop: null };
       }
       return { ...state, selectedRoutes: next };
     }
     case 'SELECT_ALL_ROUTES':
       if (state.panelMode !== null) {
-        return { ...state, selectedRoutes: new Set(), selectedStop: null, selectedBus: null, panelMode: null, drawerView: 'home', previousBus: null, previousStop: null };
+        return { ...state, selectedRoutes: new Set(), previousSelectedRoutes: null, selectedStop: null, selectedBus: null, panelMode: null, drawerView: 'home', previousBus: null, previousStop: null };
       }
       return { ...state, selectedRoutes: new Set() };
     case 'TOGGLE_PINNED_ROUTE': {
@@ -81,6 +84,18 @@ function reducer(state: TransitState, action: Action): TransitState {
         panelMode: 'stop',
         drawerView: 'stop',
         previousBus: action.fromBusId ?? null,
+        previousStop: null,
+      };
+    case 'SELECT_STOP_WITH_ROUTE_FILTER':
+      return {
+        ...state,
+        selectedStop: action.stopId,
+        selectedRoutes: new Set([action.routeId]),
+        previousSelectedRoutes: state.selectedRoutes,
+        selectedBus: null,
+        panelMode: 'stop',
+        drawerView: 'stop',
+        previousBus: null,
         previousStop: null,
       };
     case 'SELECT_BUS':
@@ -108,6 +123,8 @@ function reducer(state: TransitState, action: Action): TransitState {
     case 'CLEAR_SELECTION':
       return {
         ...state,
+        selectedRoutes: state.previousSelectedRoutes ?? state.selectedRoutes,
+        previousSelectedRoutes: null,
         selectedStop: null,
         selectedBus: null,
         panelMode: null,
@@ -152,6 +169,7 @@ function createInitialState(): TransitState {
   return {
     selectedRoutes: new Set(),
     pinnedRoutes: new Set(),
+    previousSelectedRoutes: null,
     selectedStop: null,
     selectedBus: null,
     busSelectionKey: 0,
@@ -169,6 +187,7 @@ interface TransitContextValue {
   selectAllRoutes: () => void;
   togglePinnedRoute: (routeId: number) => void;
   selectStop: (stopId: number, fromBusId?: string) => void;
+  selectStopWithRouteFilter: (stopId: number, routeId: number) => void;
   selectBus: (busId: string) => void;
   selectBusFromStop: (busId: string, fromStopId: number) => void;
   clearSelection: () => void;
@@ -209,6 +228,7 @@ export function TransitProvider({ children }: { children: ReactNode }) {
     selectAllRoutes: () => dispatch({ type: 'SELECT_ALL_ROUTES' }),
     togglePinnedRoute: (routeId) => dispatch({ type: 'TOGGLE_PINNED_ROUTE', routeId }),
     selectStop: (stopId, fromBusId) => dispatch({ type: 'SELECT_STOP', stopId, fromBusId }),
+    selectStopWithRouteFilter: (stopId, routeId) => dispatch({ type: 'SELECT_STOP_WITH_ROUTE_FILTER', stopId, routeId }),
     selectBus: (busId) => dispatch({ type: 'SELECT_BUS', busId }),
     selectBusFromStop: (busId, fromStopId) =>
       dispatch({ type: 'SELECT_BUS_FROM_STOP', busId, fromStopId }),
