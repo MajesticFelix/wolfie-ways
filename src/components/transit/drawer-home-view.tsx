@@ -179,7 +179,7 @@ export function DrawerHomeView({
   return (
     <div className="flex flex-col pb-4">
       {/* ── Live count + route filter pills ── */}
-      <div className="px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800/50">
+      <div className="sticky top-0 z-10 px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800/50 bg-white dark:bg-zinc-950">
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
           {/* All pill */}
           <button

@@ -1,21 +1,28 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import { X } from "lucide-react";
-import { Drawer as DrawerPrimitive } from "vaul";
 import { useTransit } from "@/lib/stores/transit-store";
 import { DrawerHomeView } from "./drawer-home-view";
 import { StopPanel } from "@/components/panels/stop-panel";
 import { BusPanel } from "@/components/panels/bus-panel";
 import type { Route, Stop, Vehicle, StopImage } from "@/lib/api/types";
 
-// Dense snap points from the peek height up to full-screen in 2% steps.
-// This gives ~8 px max jump on release at 844 px viewport height — feels free.
-const FREE_SNAP_POINTS: (string | number)[] = [
-  "180px",
-  ...Array.from({ length: 40 }, (_, i) => (22 + i * 2) / 100),
-  // 0.22, 0.24, 0.26, … 0.98, 1.00
-];
+// Lower bound: enough to show the drag handle + a preview row.
+const MIN_HEIGHT = 90;
+// Pill height (~40px) + gap (~12px) reserved below the safe area for the header.
+const HEADER_BELOW_SAFE_AREA = 52;
+
+function clamp(min: number, val: number, max: number) {
+  return Math.min(max, Math.max(min, val));
+}
 
 interface TransitDrawerProps {
   routes: Route[];
@@ -33,17 +40,85 @@ export function TransitDrawer({
   mapCenter,
 }: TransitDrawerProps) {
   const { state, clearSelection } = useTransit();
-  const [activeSnapPoint, setActiveSnapPoint] = useState<string | number>(
-    "180px",
+
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const safeAreaRef = useRef<HTMLDivElement>(null);
+  const heightRef = useRef(MIN_HEIGHT);
+  const isDragging = useRef(false);
+  const dragStartY = useRef(0);
+  const dragStartH = useRef(0);
+  const [maxHeight, setMaxHeight] = useState(9999);
+
+  // ── Measure upper bound from env(safe-area-inset-top) ──
+  useLayoutEffect(() => {
+    const measure = () => {
+      const safeTop = safeAreaRef.current?.offsetHeight ?? 0;
+      setMaxHeight(window.innerHeight - safeTop - HEADER_BELOW_SAFE_AREA);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  // ── Programmatic height (view changes) ──
+  const setHeight = useCallback(
+    (h: number) => {
+      const clamped = clamp(MIN_HEIGHT, h, maxHeight);
+      heightRef.current = clamped;
+      if (sheetRef.current) {
+        sheetRef.current.style.height = `${clamped}px`;
+      }
+    },
+    [maxHeight],
   );
 
-  // Animate to the default position whenever the view changes.
-  // Both "180px" and 0.4 are present in FREE_SNAP_POINTS.
+  // Animate to sensible defaults when the drawer view changes.
   useEffect(() => {
-    setActiveSnapPoint(state.drawerView === "home" ? "180px" : 0.4);
-  }, [state.drawerView]);
+    const el = sheetRef.current;
+    if (!el) return;
+    // Enable transition for the programmatic move.
+    el.style.transition = "height 0.35s cubic-bezier(0.32,0.72,0,1)";
+    const target =
+      state.drawerView === "home"
+        ? MIN_HEIGHT
+        : Math.round(window.innerHeight * 0.4);
+    setHeight(target);
+    const onEnd = () => {
+      el.style.transition = "none";
+    };
+    el.addEventListener("transitionend", onEnd, { once: true });
+    return () => el.removeEventListener("transitionend", onEnd);
+  }, [state.drawerView, setHeight]);
 
-  // Build lookup maps (memoized to avoid re-creation on every render)
+  // ── Pointer-based drag ──
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      // Only primary button / single touch.
+      if (e.button !== 0) return;
+      isDragging.current = true;
+      dragStartY.current = e.clientY;
+      dragStartH.current = heightRef.current;
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      // Kill any leftover transition so the drag is instant.
+      if (sheetRef.current) sheetRef.current.style.transition = "none";
+    },
+    [],
+  );
+
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isDragging.current) return;
+      const delta = dragStartY.current - e.clientY; // positive = dragging up
+      setHeight(dragStartH.current + delta);
+    },
+    [setHeight],
+  );
+
+  const onPointerUp = useCallback(() => {
+    isDragging.current = false;
+  }, []);
+
+  // ── Data lookup maps ──
   const stopMap = useMemo(() => new Map(stops.map((s) => [s.id, s])), [stops]);
   const vehicleMap = useMemo(
     () => new Map(vehicles.map((v) => [v.equipmentID, v])),
@@ -76,97 +151,103 @@ export function TransitDrawer({
   const isDetailView = state.drawerView !== "home";
 
   return (
-    <DrawerPrimitive.Root
-      open
-      modal={false}
-      dismissible={false}
-      shouldScaleBackground={false}
-      noBodyStyles
-      snapPoints={FREE_SNAP_POINTS}
-      activeSnapPoint={activeSnapPoint}
-      setActiveSnapPoint={(sp) => {
-        if (sp !== null) setActiveSnapPoint(sp);
-      }}
-    >
-      <DrawerPrimitive.Portal>
-        <DrawerPrimitive.Title></DrawerPrimitive.Title>
-        <DrawerPrimitive.Content
-          className="fixed inset-x-0 bottom-0 z-40 flex h-full flex-col bg-white dark:bg-zinc-950 rounded-t-[20px] border-t border-zinc-200/70 dark:border-zinc-800/60 shadow-2xl focus:outline-none"
-          aria-label="Transit panel"
+    <>
+      {/* Measures env(safe-area-inset-top) */}
+      <div
+        ref={safeAreaRef}
+        aria-hidden
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: 0,
+          height: 0,
+          paddingTop: "env(safe-area-inset-top)",
+          pointerEvents: "none",
+          visibility: "hidden",
+        }}
+      />
+
+      <div
+        ref={sheetRef}
+        role="dialog"
+        aria-label="Transit panel"
+        className="fixed inset-x-0 bottom-0 z-40 flex flex-col bg-white dark:bg-zinc-950 rounded-t-[20px] border-t border-zinc-200/70 dark:border-zinc-800/60 shadow-2xl"
+        style={{
+          height: MIN_HEIGHT,
+          paddingBottom: "env(safe-area-inset-bottom)",
+          willChange: "height",
+          touchAction: "none",
+        }}
+      >
+        {/* ── Drag handle ── */}
+        <div
+          className="shrink-0 touch-none select-none cursor-grab active:cursor-grabbing"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
         >
-          {/* ── Fixed top section: drag handle + optional header ── */}
-          <div className="shrink-0">
-            {/* Drag handle */}
-            <div className="flex justify-center pt-3 pb-2">
-              <div className="h-1.5 w-10 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+          <div className="flex justify-center pt-3 pb-2">
+            <div className="h-1.5 w-10 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+          </div>
+        </div>
+
+        {/* ── Detail header (stop / bus) ── */}
+        {isDetailView && (
+          <div className="shrink-0 flex items-center justify-between px-4 pb-3 border-b border-zinc-100 dark:border-zinc-800/60">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-black tracking-[0.18em] uppercase text-zinc-400 dark:text-zinc-500">
+                {state.drawerView === "bus" ? "Live Bus" : "Bus Stop"}
+              </p>
             </div>
-
-            {/* Detail view header (stop / bus) */}
-            {isDetailView && (
-              <div className="flex items-center justify-between px-4 pb-3 border-b border-zinc-100 dark:border-zinc-800/60">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-black tracking-[0.18em] uppercase text-zinc-400 dark:text-zinc-500">
-                    {state.drawerView === "bus" ? "Live Bus" : "Bus Stop"}
-                  </p>
-                  {state.drawerView === "bus" && selectedVehicle && (
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate mt-0.5">
-                      {selectedVehicleRoute?.name ??
-                        `Bus ${selectedVehicle.equipmentID}`}
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={clearSelection}
-                  className="ml-3 w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors shrink-0"
-                  aria-label="Back to home"
-                >
-                  <X className="w-4 h-4 text-zinc-500 dark:text-zinc-300" />
-                </button>
-              </div>
-            )}
+            <button
+              onClick={clearSelection}
+              className="ml-3 w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors shrink-0"
+              aria-label="Back to home"
+            >
+              <X className="w-4 h-4 text-zinc-500 dark:text-zinc-300" />
+            </button>
           </div>
+        )}
 
-          {/* ── Scrollable content area ── */}
-          <div
-            className="flex-1 overflow-y-auto scrollbar-none"
-            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-          >
-            {state.drawerView === "home" && (
-              <DrawerHomeView
+        {/* ── Scrollable content ── */}
+        <div className="flex-1 overflow-y-auto scrollbar-none">
+          {state.drawerView === "home" && (
+            <DrawerHomeView
+              routes={routes}
+              stops={stops}
+              vehicles={vehicles}
+              mapCenter={mapCenter}
+            />
+          )}
+
+          {state.drawerView === "stop" && selectedStop && (
+            <div className="px-4 py-4">
+              <StopPanel
+                stop={selectedStop}
                 routes={routes}
-                stops={stops}
                 vehicles={vehicles}
-                mapCenter={mapCenter}
+                stopImage={stopImage}
+                previousBusVehicle={previousBusVehicle}
+                previousBusRoute={previousBusRoute}
               />
-            )}
+            </div>
+          )}
 
-            {state.drawerView === "stop" && selectedStop && (
-              <div className="px-4 py-4">
-                <StopPanel
-                  stop={selectedStop}
-                  routes={routes}
-                  vehicles={vehicles}
-                  stopImage={stopImage}
-                  previousBusVehicle={previousBusVehicle}
-                  previousBusRoute={previousBusRoute}
-                />
-              </div>
-            )}
-
-            {state.drawerView === "bus" && selectedVehicle && (
-              <div className="px-4 py-4">
-                <BusPanel
-                  vehicle={selectedVehicle}
-                  route={selectedVehicleRoute}
-                  nextStop={nextStop}
-                  stops={stopMap}
-                  previousStop={previousStop}
-                />
-              </div>
-            )}
-          </div>
-        </DrawerPrimitive.Content>
-      </DrawerPrimitive.Portal>
-    </DrawerPrimitive.Root>
+          {state.drawerView === "bus" && selectedVehicle && (
+            <div className="px-4 py-4">
+              <BusPanel
+                vehicle={selectedVehicle}
+                route={selectedVehicleRoute}
+                nextStop={nextStop}
+                stops={stopMap}
+                previousStop={previousStop}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
