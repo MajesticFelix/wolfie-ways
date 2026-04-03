@@ -35,6 +35,7 @@ interface TransitState {
 }
 
 type Action =
+  | { type: 'LOAD_PERSISTED'; selectedRoutes: Set<number>; pinnedRoutes: Set<number> }
   | { type: 'TOGGLE_ROUTE'; routeId: number }
   | { type: 'SELECT_ALL_ROUTES' }
   | { type: 'TOGGLE_PINNED_ROUTE'; routeId: number }
@@ -50,6 +51,8 @@ type Action =
 
 function reducer(state: TransitState, action: Action): TransitState {
   switch (action.type) {
+    case 'LOAD_PERSISTED':
+      return { ...state, selectedRoutes: action.selectedRoutes, pinnedRoutes: action.pinnedRoutes };
     case 'TOGGLE_ROUTE': {
       const next = new Set(state.selectedRoutes);
       if (next.has(action.routeId)) next.delete(action.routeId);
@@ -147,8 +150,8 @@ function reducer(state: TransitState, action: Action): TransitState {
 
 function createInitialState(): TransitState {
   return {
-    selectedRoutes: loadSet(SELECTED_ROUTES_KEY),
-    pinnedRoutes: loadSet(PINNED_ROUTES_KEY),
+    selectedRoutes: new Set(),
+    pinnedRoutes: new Set(),
     selectedStop: null,
     selectedBus: null,
     busSelectionKey: 0,
@@ -181,6 +184,15 @@ const TransitContext = createContext<TransitContextValue | null>(null);
 
 export function TransitProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, createInitialState);
+
+  // Load persisted routes after mount (avoids SSR/client hydration mismatch)
+  useEffect(() => {
+    const selectedRoutes = loadSet(SELECTED_ROUTES_KEY);
+    const pinnedRoutes = loadSet(PINNED_ROUTES_KEY);
+    if (selectedRoutes.size > 0 || pinnedRoutes.size > 0) {
+      dispatch({ type: 'LOAD_PERSISTED', selectedRoutes, pinnedRoutes });
+    }
+  }, []);
 
   // Persist selected and pinned routes to localStorage
   useEffect(() => {

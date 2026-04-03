@@ -1,13 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  fetchRoutes,
-  fetchStops,
-  fetchPatterns,
-  fetchStopImages,
-  fetchVersionId,
-} from "@/lib/api/spot-client";
+import { useRouter } from "next/navigation";
+import { fetchVersionId } from "@/lib/api/spot-client";
 import type { Route, Stop, Pattern, StopImage } from "@/lib/api/types";
 
 const VERSION_POLL_INTERVAL = 30_000;
@@ -21,50 +16,32 @@ export interface TransitStaticData {
   error: Error | null;
 }
 
-export function useTransitData(): TransitStaticData {
-  const [routes, setRoutes] = useState<Route[]>([]);
-  const [stops, setStops] = useState<Stop[]>([]);
-  const [patterns, setPatterns] = useState<Pattern[]>([]);
-  const [stopImages, setStopImages] = useState<Map<number, StopImage>>(
-    new Map(),
-  );
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const lastVersionRef = useRef<number | null>(null);
+export interface TransitInitialData {
+  routes: Route[];
+  stops: Stop[];
+  patterns: Pattern[];
+  stopImages: StopImage[];
+  initialVersion: number;
+}
 
-  const loadStaticData = async () => {
-    try {
-      const [r, s, p, si] = await Promise.all([
-        fetchRoutes(),
-        fetchStops(),
-        fetchPatterns(),
-        fetchStopImages(),
-      ]);
-      setRoutes(r.sort((a, b) => a.order - b.order));
-      setStops(s);
-      setPatterns(p);
-      const imgMap = new Map<number, StopImage>();
-      for (const img of si) imgMap.set(img.stopid, img);
-      setStopImages(imgMap);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error(String(err)));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+export function useTransitData(initialData: TransitInitialData): TransitStaticData {
+  const router = useRouter();
+  const [stopImagesMap] = useState<Map<number, StopImage>>(() => {
+    const map = new Map<number, StopImage>();
+    for (const img of initialData.stopImages) map.set(img.stopid, img);
+    return map;
+  });
+  const lastVersionRef = useRef<number>(initialData.initialVersion);
 
   useEffect(() => {
-    loadStaticData();
-
     const checkVersion = async () => {
       if (document.visibilityState === "hidden") return;
       try {
         const v = await fetchVersionId();
-        if (lastVersionRef.current !== null && lastVersionRef.current !== v) {
-          loadStaticData();
+        if (lastVersionRef.current !== v) {
+          lastVersionRef.current = v;
+          router.refresh();
         }
-        lastVersionRef.current = v;
       } catch {
         // ignore version check errors
       }
@@ -75,5 +52,12 @@ export function useTransitData(): TransitStaticData {
     return () => clearInterval(interval);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { routes, stops, patterns, stopImages, isLoading, error };
+  return {
+    routes: initialData.routes,
+    stops: initialData.stops,
+    patterns: initialData.patterns,
+    stopImages: stopImagesMap,
+    isLoading: false,
+    error: null,
+  };
 }

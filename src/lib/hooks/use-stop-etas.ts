@@ -5,7 +5,7 @@ import { fetchStopETAs, fetchSchedules } from '@/lib/api/spot-client';
 import { usePolling } from './use-polling';
 import type { StopETA, Schedule } from '@/lib/api/types';
 
-const ETA_INTERVAL = 10_000;
+const ETA_INTERVAL = 5_000;
 
 export function useStopETAs(stopId: number | null) {
   const fetchFn = useCallback(() => {

@@ -15,7 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Wolfie Ways — SBU Bus Tracker",
-  description: "Real-time campus bus tracker for Stony Brook University students",
+  description:
+    "Real-time campus bus tracker for Stony Brook University students",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
