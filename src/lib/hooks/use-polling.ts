@@ -61,7 +61,10 @@ export function usePolling<T>(
     }, intervalMs);
 
     const onVisible = () => {
-      if (document.visibilityState === 'visible') run(generationRef.current);
+      if (document.visibilityState === 'visible') {
+        setState({ data: null, error: null, isLoading: true });
+        run(generationRef.current);
+      }
     };
     document.addEventListener('visibilitychange', onVisible);
 

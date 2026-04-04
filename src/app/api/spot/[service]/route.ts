@@ -67,7 +67,7 @@ export async function GET(
     const data = await res.json();
     return NextResponse.json(data, {
       headers: {
-        'Cache-Control': `public, s-maxage=${ttl}, stale-while-revalidate=${Math.floor(ttl / 2)}`,
+        'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=${Math.floor(ttl / 2)}`,
       },
     });
   } catch {
