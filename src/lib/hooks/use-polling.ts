@@ -22,11 +22,17 @@ export function usePolling<T>(
   const fetchFnRef = useRef(fetchFn);
   fetchFnRef.current = fetchFn;
 
-  const run = useCallback(async () => {
+  // Generation counter: incremented every time the effect re-runs (key/enabled change).
+  // A fetch that resolves after a new generation has started is simply discarded.
+  const generationRef = useRef(0);
+
+  const run = useCallback(async (generation: number) => {
     try {
       const data = await fetchFnRef.current();
+      if (generationRef.current !== generation) return; // stale — discard
       setState({ data, error: null, isLoading: false });
     } catch (err) {
+      if (generationRef.current !== generation) return;
       setState((prev) => ({
         ...prev,
         error: err instanceof Error ? err : new Error(String(err)),
@@ -35,18 +41,31 @@ export function usePolling<T>(
     }
   }, []);
 
+  // Clear stale data immediately when the key or enabled flag changes so
+  // consumers never display results that belong to a different query.
+  useEffect(() => {
+    if (!enabled) return;
+    setState({ data: null, error: null, isLoading: true });
+  }, [key, enabled]);
+
   useEffect(() => {
     if (!enabled) return;
 
-    run();
+    const generation = ++generationRef.current;
+    run(generation);
 
     const interval = setInterval(() => {
       if (document.visibilityState !== 'hidden') {
-        run();
+        run(generation);
       }
     }, intervalMs);
 
-    const onVisible = () => { if (document.visibilityState === 'visible') run(); };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        setState({ data: null, error: null, isLoading: true });
+        run(generationRef.current);
+      }
+    };
     document.addEventListener('visibilitychange', onVisible);
 
     return () => {
@@ -55,5 +74,9 @@ export function usePolling<T>(
     };
   }, [enabled, intervalMs, run, key]);
 
-  return { ...state, refresh: run };
+  const refresh = useCallback(() => {
+    run(generationRef.current);
+  }, [run]);
+
+  return { ...state, refresh };
 }

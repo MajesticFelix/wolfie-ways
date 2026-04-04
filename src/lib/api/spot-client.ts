@@ -23,7 +23,7 @@ async function spotFetch<T>(service: string, params?: Record<string, string>): P
   if (params) {
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   }
-  const res = await fetch(url.toString(), { cache: 'no-store' });
+  const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`SPOT API error: ${service} ${res.status}`);
   return res.json();
 }

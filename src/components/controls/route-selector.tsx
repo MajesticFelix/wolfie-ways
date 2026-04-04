@@ -3,7 +3,6 @@
 import { memo } from 'react';
 import { Pin } from 'lucide-react';
 import { useTransit } from '@/lib/stores/transit-store';
-import { usePinnedRoutes } from '@/lib/hooks/use-pinned-routes';
 import { resolveRouteColor } from '@/lib/utils/maps';
 import { useDarkMode } from '@/lib/hooks/use-dark-mode';
 import type { Route } from '@/lib/api/types';
@@ -13,8 +12,7 @@ interface RouteSelectorProps {
 }
 
 export const RouteSelector = memo(function RouteSelector({ routes }: RouteSelectorProps) {
-  const { state, toggleRoute, selectAllRoutes, isRouteVisible } = useTransit();
-  const { pinned, togglePin } = usePinnedRoutes();
+  const { state, toggleRoute, selectAllRoutes, togglePinnedRoute, isRouteVisible } = useTransit();
   const isDark = useDarkMode();
   const allSelected = state.selectedRoutes.size === 0;
 
@@ -24,8 +22,8 @@ export const RouteSelector = memo(function RouteSelector({ routes }: RouteSelect
 
   // Pinned routes first, then the rest in original order
   const sorted = [
-    ...routes.filter((r) => pinned.has(r.id)),
-    ...routes.filter((r) => !pinned.has(r.id)),
+    ...routes.filter((r) => state.pinnedRoutes.has(r.id)),
+    ...routes.filter((r) => !state.pinnedRoutes.has(r.id)),
   ];
 
   return (
@@ -87,7 +85,7 @@ export const RouteSelector = memo(function RouteSelector({ routes }: RouteSelect
         {sorted.map((route) => {
           const active = isRouteVisible(route.id) && !allSelected;
           const color = resolveRouteColor(route.color, isDark);
-          const isPinned = pinned.has(route.id);
+          const isPinned = state.pinnedRoutes.has(route.id);
           return (
             <RouteRow
               key={route.id}
@@ -98,7 +96,7 @@ export const RouteSelector = memo(function RouteSelector({ routes }: RouteSelect
               onToggle={() => toggleRoute(route.id)}
               onTogglePin={(e) => {
                 e.stopPropagation();
-                togglePin(route.id);
+                togglePinnedRoute(route.id);
               }}
             />
           );

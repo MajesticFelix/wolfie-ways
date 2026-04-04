@@ -12,6 +12,7 @@ interface RouteCardProps {
   eta: ETAEntry;
   isLive: boolean;
   isDark: boolean;
+  isPinned?: boolean;
   onClick: () => void;
 }
 
@@ -21,6 +22,7 @@ export const RouteCard = memo(function RouteCard({
   eta,
   isLive,
   isDark,
+  isPinned,
   onClick,
 }: RouteCardProps) {
   const color = resolveRouteColor(route.color, isDark);
@@ -28,9 +30,14 @@ export const RouteCard = memo(function RouteCard({
 
   return (
     <div
-      className="w-full flex items-stretch rounded-xl overflow-hidden border border-zinc-200/60 dark:border-zinc-800/50 bg-zinc-50 dark:bg-zinc-900/80"
+      className="relative w-full flex items-stretch rounded-xl overflow-visible border border-zinc-200/60 dark:border-zinc-800/50 bg-zinc-50 dark:bg-zinc-900/80"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
+      {isPinned && (
+        <div className="absolute -top-2 -right-2 z-10 w-5 h-5 rounded-full bg-amber-400 dark:bg-amber-500 flex items-center justify-center shadow-sm">
+          <Pin className="w-2.5 h-2.5 text-white fill-white" />
+        </div>
+      )}
       {/* Left color accent bar */}
       <div className="w-1 shrink-0" style={{ backgroundColor: color }} />
 
@@ -65,8 +72,8 @@ export const RouteCard = memo(function RouteCard({
         {/* ETA */}
         <div className="text-right shrink-0 min-w-10">
           <p
-            className="text-lg font-bold tabular-nums leading-tight"
-            style={{ color: isArriving ? "#22c55e" : color }}
+            className={`text-lg font-bold tabular-nums leading-tight${isArriving ? " text-green-500" : ""}`}
+            style={isArriving ? undefined : { color }}
           >
             {isArriving ? "Now" : eta.minutes}
           </p>

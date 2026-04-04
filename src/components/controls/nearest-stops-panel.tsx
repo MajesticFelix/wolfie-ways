@@ -86,7 +86,7 @@ export const NearestStopsPanel = memo(function NearestStopsPanel({ stops, routes
               key={stop.id}
               onClick={() => {
                 selectStop(stop.id);
-                panMap(stop.lat, stop.lng, 18);
+                panMap(stop.lat, stop.lng, 16);
               }}
               className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left hover:bg-black/4 dark:hover:bg-white/4 transition-colors group"
             >

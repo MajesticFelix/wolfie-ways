@@ -144,7 +144,6 @@ export interface StopETAsResponse { get_stop_etas: StopETA[] }
 export interface SchedulesResponse { get_schedules: Schedule[] }
 export interface AnnouncementsResponse { get_service_announcements: AnnouncementGroup[] }
 export interface PatternsResponse { get_patterns: Pattern[] }
-export interface ActivePatternsResponse { get_active_patterns: { errors: unknown[]; result: Record<string, unknown> } }
 export interface StopImagesResponse { get_stopimages: StopImage[] }
 export interface VersionResponse { versionID: number }
 

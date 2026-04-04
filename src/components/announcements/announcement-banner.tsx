@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AlertTriangle, Info, X } from "lucide-react";
 import type { AnnouncementGroup } from "@/lib/api/types";
 
@@ -27,6 +27,8 @@ export function AnnouncementBanner({ groups }: AnnouncementBannerProps) {
     setVisible(true);
   }, [groups]);
 
+  const swapRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Auto-cycle
   useEffect(() => {
     if (all.length <= 1 || dismissed) return;
@@ -34,15 +36,16 @@ export function AnnouncementBanner({ groups }: AnnouncementBannerProps) {
     const id = setInterval(() => {
       // Fade out → swap → fade in
       setVisible(false);
-      const swap = setTimeout(() => {
+      swapRef.current = setTimeout(() => {
         setIndex((i) => (i + 1) % all.length);
         setVisible(true);
       }, FADE_MS);
-
-      return () => clearTimeout(swap);
     }, CYCLE_MS);
 
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      if (swapRef.current) clearTimeout(swapRef.current);
+    };
   }, [all.length, dismissed]);
 
   if (all.length === 0 || dismissed) return null;

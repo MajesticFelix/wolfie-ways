@@ -34,15 +34,11 @@ export function DrawerHomeView({
     state,
     toggleRoute,
     selectAllRoutes,
-    selectStop,
-    selectBusFromStop,
+    selectStopWithRouteFilter,
     panMap,
-    togglePinnedRoute,
   } = useTransit();
   const isDark = useDarkMode();
   const { geoState, nearest, requestLocation } = useNearestStops(stops, 5);
-
-  console.table(state);
 
   // Stops within 200 m of the map crosshair center (updates after each pan settles).
   // Only considers stops visible under the current route filters so results
@@ -90,6 +86,12 @@ export function DrawerHomeView({
     () => activeNearest.map((n) => n.stop.id),
     [activeNearest],
   );
+
+  // Maps stopId → distance rank (0 = closest) for sorting departures by proximity
+  const nearestRankMap = useMemo(
+    () => new Map(activeNearest.map((n, i) => [n.stop.id, i])),
+    [activeNearest],
+  );
   const stopMap = useMemo(() => new Map(stops.map((s) => [s.id, s])), [stops]);
   const routeMap = useMemo(
     () => new Map(routes.map((r) => [r.id, r])),
@@ -105,41 +107,31 @@ export function DrawerHomeView({
 
   const allSelected = state.selectedRoutes.size === 0;
 
-  // Pinned routes section: one card per route per stop, sorted by arrival
-  const pinnedDepartures = useMemo(() => {
-    if (!departures || state.pinnedRoutes.size === 0) return [];
+  // All departures: pinned routes first, then by stop proximity, then by ETA.
+  // Respects route filter (pinned routes are always shown regardless of filter).
+  const filteredDepartures = useMemo(() => {
+    if (!departures) return [];
     const seen = new Set<string>();
     return departures
       .filter((d) => {
-        if (!state.pinnedRoutes.has(d.eta.routeID)) return false;
+        const isPinned = state.pinnedRoutes.has(d.eta.routeID);
+        if (!isPinned && state.selectedRoutes.size > 0 && !state.selectedRoutes.has(d.eta.routeID)) return false;
         const key = `${d.stopId}-${d.eta.routeID}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
       })
-      .slice(0, 6);
-  }, [departures, state.pinnedRoutes]);
-
-  // Nearby departures: non-pinned routes, respects route filter
-  const filteredDepartures = useMemo(() => {
-    if (!departures) return [];
-    let filtered = departures;
-    if (state.selectedRoutes.size > 0) {
-      filtered = filtered.filter((d) =>
-        state.selectedRoutes.has(d.eta.routeID),
-      );
-    }
-    const seen = new Set<string>();
-    return filtered
-      .filter((d) => {
-        if (state.pinnedRoutes.has(d.eta.routeID)) return false;
-        const key = `${d.stopId}-${d.eta.routeID}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
+      .sort((a, b) => {
+        const aPinned = state.pinnedRoutes.has(a.eta.routeID) ? 0 : 1;
+        const bPinned = state.pinnedRoutes.has(b.eta.routeID) ? 0 : 1;
+        if (aPinned !== bPinned) return aPinned - bPinned;
+        const rankA = nearestRankMap.get(a.stopId) ?? Infinity;
+        const rankB = nearestRankMap.get(b.stopId) ?? Infinity;
+        if (rankA !== rankB) return rankA - rankB;
+        return a.eta.minutes - b.eta.minutes;
       })
-      .slice(0, 12);
-  }, [departures, state.selectedRoutes, state.pinnedRoutes]);
+      .slice(0, 18);
+  }, [departures, state.selectedRoutes, state.pinnedRoutes, nearestRankMap]);
 
   // hasLocation: we have at least one position source (crosshair settled OR geo granted)
   // hasNearbyStops: that position has stops within range to query
@@ -170,7 +162,7 @@ export function DrawerHomeView({
   return (
     <div className="flex flex-col pb-4">
       {/* ── Live count + route filter pills ── */}
-      <div className="px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800/50">
+      <div className="sticky top-0 z-20 px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800/50 bg-white dark:bg-zinc-950">
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
           {/* All pill */}
           <button
@@ -224,122 +216,14 @@ export function DrawerHomeView({
         </div>
       </div>
 
-      {/* ── Pinned routes ── */}
+      {/* ── Nearby departures ── */}
       <div className="px-4 pt-4 flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <p className="text-[10px] font-black tracking-[0.18em] uppercase text-zinc-400 dark:text-zinc-500">
-            Pinned Routes
+            Nearby Departures
           </p>
           <ManagePinsDrawer routes={routes} />
         </div>
-
-        {state.pinnedRoutes.size === 0 ? (
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-zinc-100/80 dark:bg-zinc-900/80 border border-zinc-200/60 dark:border-zinc-800/50">
-            <div
-              className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-              style={{
-                backgroundColor: "rgba(245, 158, 11, 0.1)",
-                border: "1px solid rgba(245, 158, 11, 0.2)",
-              }}
-            >
-              <Pin className="w-4 h-4" color="#f59e0b" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-                No pinned routes
-              </p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Use Manage Pins above to add favorites
-              </p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {showGeoPrompt && (
-              <button
-                onClick={requestLocation}
-                className="flex items-center gap-3 p-4 rounded-xl bg-zinc-100/80 dark:bg-zinc-900/80 border border-zinc-200/60 dark:border-zinc-800/50 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/50 transition-colors text-left w-full"
-              >
-                <div className="w-9 h-9 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                  <Navigation className="w-4 h-4 text-blue-500" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-                    Use my location
-                  </p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    See buses arriving near you
-                  </p>
-                </div>
-              </button>
-            )}
-            {showETAsLoading && (
-              <div className="flex flex-col gap-2">
-                {[1, 2].map((i) => (
-                  <Skeleton
-                    key={i}
-                    className="h-15 rounded-xl bg-zinc-200 dark:bg-zinc-800/80"
-                  />
-                ))}
-              </div>
-            )}
-            {hasLocation &&
-              hasNearbyStops &&
-              !etasLoading &&
-              pinnedDepartures.length === 0 && (
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-100/80 dark:bg-zinc-900/80 border border-zinc-200/60 dark:border-zinc-800/50">
-                  <Clock className="w-4 h-4 text-zinc-400 shrink-0" />
-                  <p className="text-sm text-zinc-400 dark:text-zinc-500">
-                    No pinned buses nearby
-                  </p>
-                </div>
-              )}
-            {hasNearbyStops && !etasLoading && pinnedDepartures.length > 0 && (
-              <div className="flex flex-col gap-2">
-                {pinnedDepartures.map((departure, i) => {
-                  const route = routeMap.get(departure.eta.routeID);
-                  const stop = stopMap.get(departure.stopId);
-                  if (!route || !stop) return null;
-                  const isLive =
-                    departure.eta.equipmentID !== "-" &&
-                    vehicleMap.has(departure.eta.equipmentID);
-                  return (
-                    <RouteCard
-                      key={`pinned-${departure.stopId}-${departure.eta.routeID}-${i}`}
-                      route={route}
-                      stopName={stop.name || stop.shortName}
-                      eta={departure.eta}
-                      isLive={isLive}
-                      isDark={isDark}
-                      onClick={() => {
-                        if (isLive) {
-                          const vehicle = vehicleMap.get(
-                            departure.eta.equipmentID,
-                          );
-                          selectBusFromStop(
-                            departure.eta.equipmentID,
-                            departure.stopId,
-                          );
-                          if (vehicle) panMap(vehicle.lat, vehicle.lng, 18);
-                        } else {
-                          selectStop(departure.stopId);
-                          panMap(stop.lat, stop.lng, 18);
-                        }
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* ── Nearby departures ── */}
-      <div className="px-4 pt-4 flex flex-col gap-2">
-        <p className="text-[10px] font-black tracking-[0.18em] uppercase text-zinc-400 dark:text-zinc-500">
-          Nearby Departures
-        </p>
 
         {showGeoPrompt && (
           <button
@@ -413,7 +297,7 @@ export function DrawerHomeView({
           )}
 
         {hasNearbyStops && !etasLoading && filteredDepartures.length > 0 && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {filteredDepartures.map((departure, i) => {
               const route = routeMap.get(departure.eta.routeID);
               const stop = stopMap.get(departure.stopId);
@@ -421,6 +305,7 @@ export function DrawerHomeView({
               const isLive =
                 departure.eta.equipmentID !== "-" &&
                 vehicleMap.has(departure.eta.equipmentID);
+              const isPinned = state.pinnedRoutes.has(departure.eta.routeID);
               return (
                 <RouteCard
                   key={`${departure.stopId}-${departure.eta.routeID}-${i}`}
@@ -429,18 +314,10 @@ export function DrawerHomeView({
                   eta={departure.eta}
                   isLive={isLive}
                   isDark={isDark}
+                  isPinned={isPinned}
                   onClick={() => {
-                    if (isLive) {
-                      const vehicle = vehicleMap.get(departure.eta.equipmentID);
-                      selectBusFromStop(
-                        departure.eta.equipmentID,
-                        departure.stopId,
-                      );
-                      if (vehicle) panMap(vehicle.lat, vehicle.lng, 18);
-                    } else {
-                      selectStop(departure.stopId);
-                      panMap(stop.lat, stop.lng, 18);
-                    }
+                    selectStopWithRouteFilter(departure.stopId, departure.eta.routeID);
+                    panMap(stop.lat, stop.lng, 16);
                   }}
                 />
               );

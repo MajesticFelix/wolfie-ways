@@ -103,7 +103,7 @@ export function MapView({
                 <button
                   onClick={() => {
                     selectStop(lockedStop.id);
-                    panMap(lockedStop.lat, lockedStop.lng, 18);
+                    panMap(lockedStop.lat, lockedStop.lng, 16);
                   }}
                   className="pointer-events-auto absolute whitespace-nowrap"
                   style={{
@@ -261,7 +261,6 @@ function MapCrosshairTracker({
 
     const idleListener = map.addListener("idle", () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      console.log("Idling");
       timerRef.current = setTimeout(() => {
         const center = map.getCenter();
         if (!center) return;
