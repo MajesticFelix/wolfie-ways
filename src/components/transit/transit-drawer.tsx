@@ -43,7 +43,7 @@ export function TransitDrawer({
 
   const sheetRef = useRef<HTMLDivElement>(null);
   const safeAreaRef = useRef<HTMLDivElement>(null);
-  const heightRef = useRef(MIN_HEIGHT);
+  const heightRef = useRef(200);
   const isDragging = useRef(false);
   const dragStartY = useRef(0);
   const dragStartH = useRef(0);
@@ -72,23 +72,29 @@ export function TransitDrawer({
     [maxHeight],
   );
 
-  // Animate to sensible defaults when the drawer view changes.
+  const prevDrawerView = useRef(state.drawerView);
+
+  // Animate to sensible defaults when the drawer view actually changes.
+  // We compare against prevDrawerView so that re-runs caused by maxHeight
+  // updating (safe-area measurement) don't reset the initial 200px height.
   useEffect(() => {
     const el = sheetRef.current;
-    if (!el) return;
-    // Enable transition for the programmatic move.
+    if (!el || prevDrawerView.current === state.drawerView) return;
+    prevDrawerView.current = state.drawerView;
     el.style.transition = "height 0.35s cubic-bezier(0.32,0.72,0,1)";
     const target =
       state.drawerView === "home"
-        ? MIN_HEIGHT
+        ? 200
         : Math.round(window.innerHeight * 0.4);
-    setHeight(target);
+    const newH = clamp(MIN_HEIGHT, target, maxHeight);
+    heightRef.current = newH;
+    el.style.height = `${newH}px`;
     const onEnd = () => {
       el.style.transition = "none";
     };
     el.addEventListener("transitionend", onEnd, { once: true });
     return () => el.removeEventListener("transitionend", onEnd);
-  }, [state.drawerView, setHeight]);
+  }, [state.drawerView, maxHeight]);
 
   // ── Pointer-based drag ──
   const onPointerDown = useCallback(
@@ -174,7 +180,7 @@ export function TransitDrawer({
         aria-label="Transit panel"
         className="fixed inset-x-0 bottom-0 z-40 flex flex-col bg-white dark:bg-zinc-950 rounded-t-[20px] border-t border-zinc-200/70 dark:border-zinc-800/60 shadow-2xl"
         style={{
-          height: MIN_HEIGHT,
+          height: 200,
           paddingBottom: "env(safe-area-inset-bottom)",
           willChange: "height",
           touchAction: "none",

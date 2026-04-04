@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, MapPin, ChevronDown, ChevronUp, Wifi, ArrowLeft } from "lucide-react";
+import { Clock, MapPin, ChevronDown, ChevronUp, Wifi, ArrowLeft, Pin } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -50,7 +50,12 @@ export function StopPanel({
   const allETAs = etas?.flatMap((e) => e.enRoute) ?? [];
   const sortedETAs = [...allETAs]
     .filter((e) => !hasRouteFilter || state.selectedRoutes.has(e.routeID))
-    .sort((a, b) => a.minutes - b.minutes);
+    .sort((a, b) => {
+      const aPinned = state.pinnedRoutes.has(a.routeID) ? 0 : 1;
+      const bPinned = state.pinnedRoutes.has(b.routeID) ? 0 : 1;
+      if (aPinned !== bPinned) return aPinned - bPinned;
+      return a.minutes - b.minutes;
+    });
 
   // Filter schedules by selected routes (corridorID maps to route ID)
   const filteredSchedules = hasRouteFilter && schedules
@@ -183,6 +188,7 @@ export function StopPanel({
               const route = routeMap.get(eta.routeID);
               const color = resolveRouteColor(route?.color ?? "#3B82F6", isDark);
               const isLive = eta.equipmentID !== "-" && vehicleMap.has(eta.equipmentID);
+              const isPinned = state.pinnedRoutes.has(eta.routeID);
 
               return (
                 <button
@@ -190,8 +196,13 @@ export function StopPanel({
                     onClick={() =>
                       handleETAClick(eta.equipmentID, route?.name ?? `Route ${eta.routeID}`)
                     }
-                  className="flex items-center gap-3 p-3 rounded-xl bg-zinc-100/80 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-zinc-700/40 text-left w-full transition-colors hover:bg-zinc-200/70 dark:hover:bg-zinc-700/50 group"
+                  className="relative flex items-center gap-3 p-3 rounded-xl bg-zinc-100/80 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-zinc-700/40 text-left w-full transition-colors hover:bg-zinc-200/70 dark:hover:bg-zinc-700/50 group"
                   >
+                  {isPinned && (
+                    <div className="absolute -top-2 -right-2 z-10 w-5 h-5 rounded-full bg-amber-400 dark:bg-amber-500 flex items-center justify-center shadow-sm">
+                      <Pin className="w-2.5 h-2.5 text-white fill-white" />
+                    </div>
+                  )}
                   <div
                     className="w-1 h-8 rounded-full shrink-0"
                     style={{ backgroundColor: color }}
