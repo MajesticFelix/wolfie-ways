@@ -59,7 +59,7 @@ export const StopMarkers = memo(function StopMarkers({ stops, routes, vehicles }
             title={stop.name}
             onClick={() => {
               selectStop(stop.id);
-              panMap(stop.lat, stop.lng, 18);
+              panMap(stop.lat, stop.lng, 16);
             }}
             zIndex={isSelected ? 10 : 2}
           >
