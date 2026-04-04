@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useTransitData, type TransitInitialData } from "@/lib/hooks/use-transit-data";
 import { useVehicles } from "@/lib/hooks/use-vehicles";
@@ -36,6 +36,15 @@ export function HomeClient(props: TransitInitialData) {
   const { data: announcementGroups } = useAnnouncements();
   const isMobile = useIsMobile();
   const [showAnnouncements, setShowAnnouncements] = useState(false);
+  const [onCooldown, setOnCooldown] = useState(false);
+  const cooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleRefresh = useCallback(() => {
+    if (onCooldown || vehiclesLoading) return;
+    refreshVehicles();
+    setOnCooldown(true);
+    cooldownRef.current = setTimeout(() => setOnCooldown(false), 1000);
+  }, [onCooldown, vehiclesLoading, refreshVehicles]);
   const [mapCenter, setMapCenter] = useState<
     { lat: number; lng: number } | undefined
   >(undefined);
@@ -106,8 +115,8 @@ export function HomeClient(props: TransitInitialData) {
 
               {/* Refresh button */}
               <button
-                onClick={refreshVehicles}
-                disabled={vehiclesLoading}
+                onClick={handleRefresh}
+                disabled={vehiclesLoading || onCooldown}
                 className="w-9 h-9 flex items-center justify-center rounded-2xl bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border border-zinc-200/70 dark:border-zinc-800/60 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors shadow-lg disabled:opacity-50"
                 aria-label="Refresh bus positions"
               >
@@ -258,8 +267,8 @@ export function HomeClient(props: TransitInitialData) {
 
               {/* Refresh button */}
               <button
-                onClick={refreshVehicles}
-                disabled={vehiclesLoading}
+                onClick={handleRefresh}
+                disabled={vehiclesLoading || onCooldown}
                 className="w-10 h-10 flex items-center justify-center rounded-2xl bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border border-zinc-200/70 dark:border-zinc-800/60 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors shadow-lg disabled:opacity-50"
                 aria-label="Refresh bus positions"
               >
