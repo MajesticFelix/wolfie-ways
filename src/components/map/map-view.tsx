@@ -261,7 +261,6 @@ function MapCrosshairTracker({
 
     const idleListener = map.addListener("idle", () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      console.log("Idling");
       timerRef.current = setTimeout(() => {
         const center = map.getCenter();
         if (!center) return;

@@ -103,7 +103,11 @@ export function TransitDrawer({
       if (e.button !== 0) return;
       isDragging.current = true;
       dragStartY.current = e.clientY;
-      dragStartH.current = heightRef.current;
+      // Read the actual rendered height (mid-animation safe) rather than the
+      // target stored in heightRef, so dragging during a transition doesn't jump.
+      dragStartH.current = sheetRef.current
+        ? sheetRef.current.getBoundingClientRect().height
+        : heightRef.current;
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
       // Kill any leftover transition so the drag is instant.
       if (sheetRef.current) sheetRef.current.style.transition = "none";

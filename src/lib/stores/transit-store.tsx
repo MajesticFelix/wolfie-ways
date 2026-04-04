@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, useMemo, type ReactNode } from 'react';
 
 // ── localStorage helpers ─────────────────────────────────────
 const SELECTED_ROUTES_KEY = 'wolfie-selected-routes';
@@ -137,6 +137,7 @@ function reducer(state: TransitState, action: Action): TransitState {
       return {
         ...state,
         selectedBus: state.previousBus,
+        busSelectionKey: state.busSelectionKey + 1,
         selectedStop: null,
         panelMode: 'bus',
         drawerView: 'bus',
@@ -222,25 +223,29 @@ export function TransitProvider({ children }: { children: ReactNode }) {
     saveSet(PINNED_ROUTES_KEY, state.pinnedRoutes);
   }, [state.pinnedRoutes]);
 
-  const value: TransitContextValue = {
-    state,
-    toggleRoute: (routeId) => dispatch({ type: 'TOGGLE_ROUTE', routeId }),
+  // Stable dispatch-bound action creators — never recreated
+  const actions = useMemo(() => ({
+    toggleRoute: (routeId: number) => dispatch({ type: 'TOGGLE_ROUTE', routeId }),
     selectAllRoutes: () => dispatch({ type: 'SELECT_ALL_ROUTES' }),
-    togglePinnedRoute: (routeId) => dispatch({ type: 'TOGGLE_PINNED_ROUTE', routeId }),
-    selectStop: (stopId, fromBusId) => dispatch({ type: 'SELECT_STOP', stopId, fromBusId }),
-    selectStopWithRouteFilter: (stopId, routeId) => dispatch({ type: 'SELECT_STOP_WITH_ROUTE_FILTER', stopId, routeId }),
-    selectBus: (busId) => dispatch({ type: 'SELECT_BUS', busId }),
-    selectBusFromStop: (busId, fromStopId) =>
-      dispatch({ type: 'SELECT_BUS_FROM_STOP', busId, fromStopId }),
+    togglePinnedRoute: (routeId: number) => dispatch({ type: 'TOGGLE_PINNED_ROUTE', routeId }),
+    selectStop: (stopId: number, fromBusId?: string) => dispatch({ type: 'SELECT_STOP', stopId, fromBusId }),
+    selectStopWithRouteFilter: (stopId: number, routeId: number) => dispatch({ type: 'SELECT_STOP_WITH_ROUTE_FILTER', stopId, routeId }),
+    selectBus: (busId: string) => dispatch({ type: 'SELECT_BUS', busId }),
+    selectBusFromStop: (busId: string, fromStopId: number) => dispatch({ type: 'SELECT_BUS_FROM_STOP', busId, fromStopId }),
     clearSelection: () => dispatch({ type: 'CLEAR_SELECTION' }),
-    isRouteVisible: (routeId) =>
-      state.selectedRoutes.size === 0 || state.selectedRoutes.has(routeId),
-    panMap: (lat, lng, zoom) => dispatch({ type: 'PAN_MAP', lat, lng, zoom }),
+    panMap: (lat: number, lng: number, zoom?: number) => dispatch({ type: 'PAN_MAP', lat, lng, zoom }),
     clearMapTarget: () => dispatch({ type: 'CLEAR_MAP_TARGET' }),
     backToBus: () => dispatch({ type: 'BACK_TO_BUS' }),
     backToStop: () => dispatch({ type: 'BACK_TO_STOP' }),
-    setDrawerView: (view) => dispatch({ type: 'SET_DRAWER_VIEW', view }),
-  };
+    setDrawerView: (view: 'home' | 'stop' | 'bus') => dispatch({ type: 'SET_DRAWER_VIEW', view }),
+  }), []); // dispatch is stable from useReducer
+
+  const value = useMemo<TransitContextValue>(() => ({
+    state,
+    ...actions,
+    isRouteVisible: (routeId: number) =>
+      state.selectedRoutes.size === 0 || state.selectedRoutes.has(routeId),
+  }), [state, actions]);
 
   return <TransitContext.Provider value={value}>{children}</TransitContext.Provider>;
 }

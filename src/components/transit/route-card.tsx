@@ -72,8 +72,8 @@ export const RouteCard = memo(function RouteCard({
         {/* ETA */}
         <div className="text-right shrink-0 min-w-10">
           <p
-            className="text-lg font-bold tabular-nums leading-tight"
-            style={{ color: isArriving ? "#22c55e" : color }}
+            className={`text-lg font-bold tabular-nums leading-tight${isArriving ? " text-green-500" : ""}`}
+            style={isArriving ? undefined : { color }}
           >
             {isArriving ? "Now" : eta.minutes}
           </p>

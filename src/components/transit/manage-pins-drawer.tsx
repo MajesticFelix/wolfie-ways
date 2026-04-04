@@ -10,7 +10,6 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-  DrawerDescription,
   DrawerClose,
 } from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
