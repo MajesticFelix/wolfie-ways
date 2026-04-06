@@ -5,7 +5,7 @@ import { usePolling } from "./use-polling";
 import type { Vehicle } from "@/lib/api/types";
 import { UNASSIGNED_ROUTE_ID } from "@/lib/api/types";
 
-const VEHICLES_INTERVAL = 5_000;
+const VEHICLES_INTERVAL = 10_000;
 
 export function useVehicles() {
   const { data, error, isLoading, refresh } = usePolling<Vehicle[]>(
