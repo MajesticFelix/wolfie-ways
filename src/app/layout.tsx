@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -50,6 +51,7 @@ export default function RootLayout({
       <body className="h-dvh overflow-hidden bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
         {children}
         <Toaster position="bottom-center" theme="system" richColors />
+        <Analytics />
       </body>
     </html>
   );
