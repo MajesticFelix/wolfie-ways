@@ -42,18 +42,16 @@ export function TransitDrawer({
   const { state, clearSelection } = useTransit();
 
   const sheetRef = useRef<HTMLDivElement>(null);
-  const safeAreaRef = useRef<HTMLDivElement>(null);
   const heightRef = useRef(200);
   const isDragging = useRef(false);
   const dragStartY = useRef(0);
   const dragStartH = useRef(0);
   const [maxHeight, setMaxHeight] = useState(9999);
 
-  // ── Measure upper bound from env(safe-area-inset-top) ──
+  // ── Measure upper bound ──
   useLayoutEffect(() => {
     const measure = () => {
-      const safeTop = safeAreaRef.current?.offsetHeight ?? 0;
-      setMaxHeight(window.innerHeight - safeTop - HEADER_BELOW_SAFE_AREA);
+      setMaxHeight(window.innerHeight - HEADER_BELOW_SAFE_AREA);
     };
     measure();
     window.addEventListener("resize", measure);
@@ -162,22 +160,6 @@ export function TransitDrawer({
 
   return (
     <>
-      {/* Measures env(safe-area-inset-top) */}
-      <div
-        ref={safeAreaRef}
-        aria-hidden
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: 0,
-          height: 0,
-          paddingTop: "env(safe-area-inset-top)",
-          pointerEvents: "none",
-          visibility: "hidden",
-        }}
-      />
-
       <div
         ref={sheetRef}
         role="dialog"
@@ -185,7 +167,6 @@ export function TransitDrawer({
         className="fixed inset-x-0 bottom-0 z-40 flex flex-col bg-white dark:bg-zinc-950 rounded-t-[20px] border-t border-zinc-200/70 dark:border-zinc-800/60 shadow-2xl"
         style={{
           height: 200,
-          paddingBottom: "env(safe-area-inset-bottom)",
           willChange: "height",
           touchAction: "none",
         }}

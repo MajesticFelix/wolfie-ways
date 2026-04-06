@@ -62,8 +62,8 @@ export function HomeClient(props: TransitInitialData) {
 
   return (
     <div className="relative w-full h-dvh overflow-hidden">
-      {/* Full-screen map — fixed so it covers safe areas (Dynamic Island, home bar) */}
-      <div className="fixed inset-0 z-0">
+      {/* Full-screen map */}
+      <div className="absolute inset-0 z-0">
         <MapView
           routes={routes}
           stops={stops}
@@ -89,7 +89,7 @@ export function HomeClient(props: TransitInitialData) {
           {/* Floating top-left header stack: Pill + Refresh + Install Prompt */}
           <div
             className="absolute top-0 left-0 z-20 flex flex-col items-start gap-2 pl-3 pb-3 w-full pointer-events-none"
-            style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
+            style={{ paddingTop: "0.75rem" }}
           >
             <div className="flex items-center gap-2 pointer-events-auto">
               {/* Wolfie Ways pill — with optional announcement indicator */}
@@ -188,11 +188,10 @@ export function HomeClient(props: TransitInitialData) {
                       .map((a, i) => (
                         <div
                           key={i}
-                          className={`flex items-start gap-3 px-3 py-2.5 rounded-xl border text-sm leading-snug ${
-                            a.severity === "high"
+                          className={`flex items-start gap-3 px-3 py-2.5 rounded-xl border text-sm leading-snug ${a.severity === "high"
                               ? "bg-red-950/40 border-red-800/50 text-red-200"
                               : "bg-amber-950/30 border-amber-700/40 text-amber-200"
-                          }`}
+                            }`}
                         >
                           {a.severity === "high" ? (
                             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
@@ -215,7 +214,7 @@ export function HomeClient(props: TransitInitialData) {
           {vehicles.length > 0 && (
             <div
               className="absolute top-0 right-0 z-20 p-3"
-              style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
+              style={{ paddingTop: "0.75rem" }}
             >
               <div className="flex items-center gap-1.5 px-2.5 py-2 rounded-2xl bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border border-zinc-200/70 dark:border-zinc-800/60 shadow-lg">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
