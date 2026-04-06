@@ -188,11 +188,10 @@ export function HomeClient(props: TransitInitialData) {
                       .map((a, i) => (
                         <div
                           key={i}
-                          className={`flex items-start gap-3 px-3 py-2.5 rounded-xl border text-sm leading-snug ${
-                            a.severity === "high"
+                          className={`flex items-start gap-3 px-3 py-2.5 rounded-xl border text-sm leading-snug ${a.severity === "high"
                               ? "bg-red-950/40 border-red-800/50 text-red-200"
                               : "bg-amber-950/30 border-amber-700/40 text-amber-200"
-                          }`}
+                            }`}
                         >
                           {a.severity === "high" ? (
                             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
