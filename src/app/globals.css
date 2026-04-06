@@ -23,10 +23,6 @@
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
 }
 
-html {
-  height: 100%;
-}
-
 html,
 body {
   background: var(--background);

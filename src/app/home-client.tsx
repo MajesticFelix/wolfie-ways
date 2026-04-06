@@ -61,7 +61,7 @@ export function HomeClient(props: TransitInitialData) {
   );
 
   return (
-    <div className="relative w-full h-full overflow-hidden">
+    <div className="relative w-full h-dvh overflow-hidden">
       {/* Full-screen map */}
       <div className="absolute inset-0 z-0">
         <MapView
