@@ -15,6 +15,7 @@ import { RouteLines } from "./route-lines";
 import { StopMarkers } from "./stop-markers";
 import { BusMarkers } from "./bus-markers";
 import { ZoomControls } from "./zoom-controls";
+import { UserLocationMarker } from "./user-location-marker";
 import type { Route, Stop, Vehicle } from "@/lib/api/types";
 
 interface MapViewProps {
@@ -22,6 +23,7 @@ interface MapViewProps {
   stops: Stop[];
   vehicles: Vehicle[];
   onCenterChange?: (lat: number, lng: number) => void;
+  userLocation?: { lat: number; lng: number; heading: number | null } | null;
 }
 
 export function MapView({
@@ -29,6 +31,7 @@ export function MapView({
   stops,
   vehicles,
   onCenterChange,
+  userLocation,
 }: MapViewProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID;
@@ -52,6 +55,8 @@ export function MapView({
   const snapped = snapOffset.x !== 0 || snapOffset.y !== 0;
   // Crosshair is hidden while tracking a live bus
   const showCrosshair = isMobile && !state.selectedBus;
+  // True until the user manually drags the map; while true, map follows user position
+  const [isFollowingUser, setIsFollowingUser] = useState(true);
 
   return (
     <APIProvider apiKey={apiKey}>
@@ -70,9 +75,21 @@ export function MapView({
           <RouteLines routes={routes} stops={stops} vehicles={vehicles} />
           <StopMarkers stops={stops} routes={routes} vehicles={vehicles} />
           <BusMarkers vehicles={vehicles} routes={routes} />
+          {userLocation && (
+            <UserLocationMarker
+              position={{ lat: userLocation.lat, lng: userLocation.lng }}
+              heading={userLocation.heading}
+            />
+          )}
           <ZoomControls />
           <MapPanner />
           <BusTracker vehicles={vehicles} />
+          {userLocation && (
+            <UserLocationCenterer
+              userLocation={userLocation}
+              isFollowingUser={isFollowingUser}
+            />
+          )}
           {showCrosshair && onCenterChange && (
             <MapCrosshairTracker
               stops={stops}
@@ -82,6 +99,9 @@ export function MapView({
               onSnapOffset={(dx, dy) => setSnapOffset({ x: dx, y: dy })}
               onPanningChange={setIsPanning}
               onLockedStopChange={setLockedStop}
+              userLocation={userLocation ?? null}
+              isFollowingUser={isFollowingUser}
+              onFollowingEnd={() => setIsFollowingUser(false)}
             />
           )}
         </Map>
@@ -178,6 +198,9 @@ function MapCrosshairTracker({
   onSnapOffset,
   onPanningChange,
   onLockedStopChange,
+  userLocation,
+  isFollowingUser,
+  onFollowingEnd,
 }: {
   stops: Stop[];
   routes: Route[];
@@ -188,6 +211,9 @@ function MapCrosshairTracker({
   onLockedStopChange: (
     stop: { id: number; name: string; lat: number; lng: number } | null,
   ) => void;
+  userLocation: { lat: number; lng: number } | null;
+  isFollowingUser: boolean;
+  onFollowingEnd: () => void;
 }) {
   const map = useMap();
   const { state } = useTransit();
@@ -209,6 +235,12 @@ function MapCrosshairTracker({
   vehiclesRef.current = vehicles;
   const stateRef = useRef(state);
   stateRef.current = state;
+  const userLocationRef = useRef(userLocation);
+  userLocationRef.current = userLocation;
+  const isFollowingUserRef = useRef(isFollowingUser);
+  isFollowingUserRef.current = isFollowingUser;
+  const followingEndRef = useRef(onFollowingEnd);
+  followingEndRef.current = onFollowingEnd;
   // The stop we're currently locked to (null = not locked).
   const lockedStopRef = useRef<{
     id: number;
@@ -239,13 +271,14 @@ function MapCrosshairTracker({
       );
     };
 
-    // Pan → release lock, go translucent, reset crosshair to center.
+    // Pan → release user-follow lock, release stop lock, go translucent, reset crosshair.
     const dragListener = map.addListener("dragstart", () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       lockedStopRef.current = null;
       snapRef.current(0, 0);
       panRef.current(true);
       lockedChangeRef.current(null);
+      followingEndRef.current();
     });
 
     // Zoom → if locked, smoothly re-center on the locked stop.
@@ -267,6 +300,15 @@ function MapCrosshairTracker({
 
         // Map has fully settled — restore opacity.
         panRef.current(false);
+
+        // While following user, report user's position for nearby departures
+        // and skip the stop-snap logic entirely.
+        if (isFollowingUserRef.current && userLocationRef.current) {
+          centerRef.current(userLocationRef.current.lat, userLocationRef.current.lng);
+          snapRef.current(0, 0);
+          return;
+        }
+
         centerRef.current(center.lat(), center.lng());
 
         // If already locked, use a fixed offset instead of computeOffset()
@@ -377,6 +419,46 @@ function MapCrosshairTracker({
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [map]);
+
+  return null;
+}
+
+/**
+ * On the first received user position, pans the map to it.
+ * While isFollowingUser is true, re-pans on subsequent position updates
+ * (ignoring small jitter < 10 m).
+ */
+function UserLocationCenterer({
+  userLocation,
+  isFollowingUser,
+}: {
+  userLocation: { lat: number; lng: number };
+  isFollowingUser: boolean;
+}) {
+  const map = useMap();
+  const hasInitiallyCenteredRef = useRef(false);
+  const lastPanRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (!map) return;
+
+    const { lat, lng } = userLocation;
+
+    // First-ever position: always center regardless of following state.
+    if (!hasInitiallyCenteredRef.current) {
+      hasInitiallyCenteredRef.current = true;
+      map.panTo({ lat, lng });
+      lastPanRef.current = { lat, lng };
+      return;
+    }
+
+    // Subsequent updates: only follow if still following and moved >10 m.
+    if (!isFollowingUser) return;
+    const prev = lastPanRef.current;
+    if (prev && haversineM(prev.lat, prev.lng, lat, lng) < 10) return;
+    map.panTo({ lat, lng });
+    lastPanRef.current = { lat, lng };
+  }, [map, userLocation, isFollowingUser]);
 
   return null;
 }

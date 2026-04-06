@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Image from "next/image";
 import { useTransitData, type TransitInitialData } from "@/lib/hooks/use-transit-data";
 import { useVehicles } from "@/lib/hooks/use-vehicles";
 import { useAnnouncements } from "@/lib/hooks/use-announcements";
 import { useIsMobile } from "@/lib/hooks/use-is-mobile";
+import { useUserLocation } from "@/lib/hooks/use-user-location";
 import { MapView } from "@/components/map/map-view";
 import { RouteSelector } from "@/components/controls/route-selector";
 import { NearestStopsPanel } from "@/components/controls/nearest-stops-panel";
@@ -35,8 +36,14 @@ export function HomeClient(props: TransitInitialData) {
   } = useVehicles();
   const { data: announcementGroups } = useAnnouncements();
   const isMobile = useIsMobile();
+  const { position: userPosition, heading: userHeading, requestLocation } = useUserLocation();
   const [showAnnouncements, setShowAnnouncements] = useState(false);
   const [onCooldown, setOnCooldown] = useState(false);
+
+  useEffect(() => {
+    requestLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const cooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleRefresh = useCallback(() => {
@@ -62,6 +69,7 @@ export function HomeClient(props: TransitInitialData) {
           stops={stops}
           vehicles={vehicles}
           onCenterChange={(lat, lng) => setMapCenter({ lat, lng })}
+          userLocation={userPosition ? { ...userPosition, heading: userHeading } : null}
         />
       </div>
 

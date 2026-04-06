@@ -57,7 +57,7 @@ export async function GET(
 
   try {
     const res = await fetch(upstream.toString(), {
-      next: { revalidate: ttl },
+      cache: 'no-store',
     });
 
     if (!res.ok) {
