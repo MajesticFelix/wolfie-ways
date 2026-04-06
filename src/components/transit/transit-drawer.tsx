@@ -160,6 +160,12 @@ export function TransitDrawer({
 
   return (
     <>
+      {/* Fills the bottom safe area (home indicator region) with the drawer's bg so the body color doesn't show through */}
+      <div
+        aria-hidden
+        className="fixed inset-x-0 bottom-0 z-39 bg-white dark:bg-zinc-950"
+        style={{ height: "env(safe-area-inset-bottom)" }}
+      />
       <div
         ref={sheetRef}
         role="dialog"

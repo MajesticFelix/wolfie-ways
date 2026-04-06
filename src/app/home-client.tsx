@@ -89,7 +89,7 @@ export function HomeClient(props: TransitInitialData) {
           {/* Floating top-left header stack: Pill + Refresh + Install Prompt */}
           <div
             className="absolute top-0 left-0 z-20 flex flex-col items-start gap-2 pl-3 pb-3 w-full pointer-events-none"
-            style={{ paddingTop: "0.75rem" }}
+            style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
           >
             <div className="flex items-center gap-2 pointer-events-auto">
               {/* Wolfie Ways pill — with optional announcement indicator */}
@@ -214,7 +214,7 @@ export function HomeClient(props: TransitInitialData) {
           {vehicles.length > 0 && (
             <div
               className="absolute top-0 right-0 z-20 p-3"
-              style={{ paddingTop: "0.75rem" }}
+              style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
             >
               <div className="flex items-center gap-1.5 px-2.5 py-2 rounded-2xl bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border border-zinc-200/70 dark:border-zinc-800/60 shadow-lg">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
