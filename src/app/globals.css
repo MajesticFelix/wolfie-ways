@@ -16,6 +16,10 @@
   }
 }
 
+html {
+  height: 100%;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
