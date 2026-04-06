@@ -55,6 +55,14 @@ export async function fetchStopETAs(stopID: number): Promise<StopETA[]> {
   return data.get_stop_etas ?? [];
 }
 
+/** Fetch ETAs for ALL stops in a single request (no stopID filter). */
+export async function fetchAllStopETAs(): Promise<StopETA[]> {
+  const data = await spotFetch<StopETAsResponse>('get_stop_etas', {
+    statusData: '1',
+  });
+  return data.get_stop_etas ?? [];
+}
+
 export async function fetchSchedules(stopID: number): Promise<Schedule[]> {
   const data = await spotFetch<SchedulesResponse>('get_schedules', {
     stopID: String(stopID),

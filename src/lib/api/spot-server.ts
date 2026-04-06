@@ -80,7 +80,7 @@ export async function getStopETAs(stopID: number): Promise<StopETA[]> {
   const data = await spotFetchServer<StopETAsResponse>('get_stop_etas', {
     stopID: String(stopID),
     statusData: '1',
-  }, 10);
+  }, 15);
   return data.get_stop_etas ?? [];
 }
 
