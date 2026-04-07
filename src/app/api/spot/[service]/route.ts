@@ -22,7 +22,7 @@ const VALID_SERVICES = new Set([
 const SERVICE_TTL: Record<string, number> = {
   get_vehicles: 5,
   get_stop_etas: 15,
-  get_service_announcements: 10,
+  get_service_announcements: 86400,
   get_active_patterns: 10,
   get_version_id: 30,
   get_schedules: 60,
