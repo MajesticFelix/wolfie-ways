@@ -72,7 +72,7 @@ export async function getVehicles(): Promise<Vehicle[]> {
     includeETAData: '1',
     inService: '1',
     orderedETAArray: '1',
-  }, 10);
+  }, 5);
   return data.get_vehicles ?? [];
 }
 
