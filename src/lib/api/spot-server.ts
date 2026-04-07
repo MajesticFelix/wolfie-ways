@@ -72,7 +72,7 @@ export async function getVehicles(): Promise<Vehicle[]> {
     includeETAData: '1',
     inService: '1',
     orderedETAArray: '1',
-  }, 10);
+  }, 5);
   return data.get_vehicles ?? [];
 }
 
@@ -94,6 +94,6 @@ export async function getSchedules(stopID: number): Promise<Schedule[]> {
 }
 
 export async function getAnnouncements(): Promise<AnnouncementGroup[]> {
-  const data = await spotFetchServer<AnnouncementsResponse>('get_service_announcements', undefined, 10);
+  const data = await spotFetchServer<AnnouncementsResponse>('get_service_announcements', undefined, 86400);
   return data.get_service_announcements ?? [];
 }
