@@ -1,11 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { AlertTriangle, Info, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { AlertTriangle, Info, X, ChevronLeft, ChevronRight } from "lucide-react";
 import type { AnnouncementGroup } from "@/lib/api/types";
-
-const CYCLE_MS = 5_000;
-const FADE_MS = 300;
 
 interface AnnouncementBannerProps {
   groups: AnnouncementGroup[];
@@ -14,7 +11,6 @@ interface AnnouncementBannerProps {
 export function AnnouncementBanner({ groups }: AnnouncementBannerProps) {
   const [dismissed, setDismissed] = useState(false);
   const [index, setIndex] = useState(0);
-  const [visible, setVisible] = useState(true);
 
   const all = groups.flatMap((g) =>
     g.announcements.map((a) => ({ ...a, severity: g.type })),
@@ -24,34 +20,15 @@ export function AnnouncementBanner({ groups }: AnnouncementBannerProps) {
   useEffect(() => {
     setDismissed(false);
     setIndex(0);
-    setVisible(true);
   }, [groups]);
-
-  const swapRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Auto-cycle
-  useEffect(() => {
-    if (all.length <= 1 || dismissed) return;
-
-    const id = setInterval(() => {
-      // Fade out → swap → fade in
-      setVisible(false);
-      swapRef.current = setTimeout(() => {
-        setIndex((i) => (i + 1) % all.length);
-        setVisible(true);
-      }, FADE_MS);
-    }, CYCLE_MS);
-
-    return () => {
-      clearInterval(id);
-      if (swapRef.current) clearTimeout(swapRef.current);
-    };
-  }, [all.length, dismissed]);
 
   if (all.length === 0 || dismissed) return null;
 
   const current = all[index];
   const isHigh = current.severity === "high";
+
+  const goPrev = () => setIndex((i) => (i - 1 + all.length) % all.length);
+  const goNext = () => setIndex((i) => (i + 1) % all.length);
 
   return (
     <div
@@ -59,11 +36,8 @@ export function AnnouncementBanner({ groups }: AnnouncementBannerProps) {
         flex items-start gap-2.5 pl-3 pr-2.5 py-2.5
         rounded-xl shadow-lg border backdrop-blur-sm
         max-w-[280px] w-max
-        transition-opacity
       `}
       style={{
-        opacity: visible ? 1 : 0,
-        transitionDuration: `${FADE_MS}ms`,
         ...(isHigh
           ? {
               background: "rgba(69,10,10,0.92)",
@@ -88,23 +62,44 @@ export function AnnouncementBanner({ groups }: AnnouncementBannerProps) {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className="text-xs leading-snug line-clamp-2">{current.text}</p>
+        <p className="text-xs leading-snug line-clamp-4">{current.text}</p>
 
-        {/* Progress dots */}
+        {/* Navigation */}
         {all.length > 1 && (
-          <div className="flex gap-1 mt-1.5">
-            {all.map((_, i) => (
-              <div
-                key={i}
-                className="rounded-full transition-all duration-300"
-                style={{
-                  width: i === index ? 12 : 4,
-                  height: 4,
-                  backgroundColor: "currentColor",
-                  opacity: i === index ? 0.8 : 0.25,
-                }}
-              />
-            ))}
+          <div className="flex items-center gap-1 mt-1.5">
+            {/* Progress dots */}
+            <div className="flex gap-1 flex-1">
+              {all.map((_, i) => (
+                <div
+                  key={i}
+                  className="rounded-full transition-all duration-300"
+                  style={{
+                    width: i === index ? 12 : 4,
+                    height: 4,
+                    backgroundColor: "currentColor",
+                    opacity: i === index ? 0.8 : 0.25,
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Arrow buttons */}
+            <div className="flex gap-0.5">
+              <button
+                onClick={goPrev}
+                className="p-0.5 rounded hover:bg-white/10 transition-colors"
+                aria-label="Previous announcement"
+              >
+                <ChevronLeft className="w-3 h-3 opacity-50" />
+              </button>
+              <button
+                onClick={goNext}
+                className="p-0.5 rounded hover:bg-white/10 transition-colors"
+                aria-label="Next announcement"
+              >
+                <ChevronRight className="w-3 h-3 opacity-50" />
+              </button>
+            </div>
           </div>
         )}
       </div>
